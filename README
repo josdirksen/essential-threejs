@@ -1,1 +1,5 @@
-This file was created by JetBrains WebStorm 6.0.2 for binding GitHub repository
+This repository contains the examples from the book Essential Three.js I'm currently writing for Packt. This
+book shows, using a couple of complex examples, how to work with the most common features of Three.js.
+
+This repo will contain the source code for the 6 large examples (chapters 2 to 7) and the examples to get you
+started will be in chapter 1.
