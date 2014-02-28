@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>02.01 - Globe and camera</title>
+    <title>02.03 - Add lighting</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/OrbitControls.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
@@ -43,26 +43,44 @@
         renderer.shadowMapEnabled = true;
 
         // create a sphere
-        var sphereGeometry = new THREE.SphereGeometry(15, 30, 30);
-        var sphereMaterial = new THREE.MeshNormalMaterial();
+        var sphereGeometry = new THREE.SphereGeometry(15, 60, 60);
+        var sphereMaterial = createEarthMaterial();
         var earthMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
         earthMesh.name = 'earth';
         scene.add(earthMesh);
 
+        // create a cloudGeometry, slighly bigger than the original sphere
+        var cloudGeometry = new THREE.SphereGeometry(sphereGeometry.radius*1.01, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
+        var cloudMaterial = createCloudMaterial();
+        var cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+        cloudMesh.name = 'clouds';
+        scene.add(cloudMesh);
+
+        // now add some better lighting
+        var ambientLight = new THREE.AmbientLight(0x111111);
+        ambientLight.name='ambient';
+        scene.add(ambientLight);
+
+        // add sunlight (light
+        var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position = new THREE.Vector3(100,10,-50);
+        directionalLight.name='directional';
+        scene.add(directionalLight);
+
         // position and point the camera to the center of the scene
-        camera.position.x = 35;
-        camera.position.y = 36;
-        camera.position.z = 33;
+        camera.position.x = 25;
+        camera.position.y = 10;
+        camera.position.z = 23;
         camera.lookAt(scene.position);
 
         // add controls
         cameraControl = new THREE.OrbitControls(camera);
 
-
         // setup the control object for the control gui
         control = new function () {
-            this.rotationSpeed = 0.005;
-            this.opacity = 0.6;
+            this.rotationSpeed = 0.001;
+            this.ambientLightColor = ambientLight.color.getHex();
+            this.directionalLightColor = directionalLight.color.getHex();
         };
 
         // add extras
@@ -78,10 +96,31 @@
         render();
     }
 
+    function createEarthMaterial() {
+        // 4096 is the maximum width for maps
+        var earthTexture = THREE.ImageUtils.loadTexture("../assets/textures/planets/earthmap4k.jpg");
+
+        var earthMaterial = new THREE.MeshPhongMaterial();
+        earthMaterial.map = earthTexture;
+
+        return earthMaterial;
+    }
+
+    function createCloudMaterial() {
+        var cloudTexture = THREE.ImageUtils.loadTexture("../assets/textures/planets/fair_clouds_4k.png");
+
+        var cloudMaterial = new THREE.MeshPhongMaterial();
+        cloudMaterial.map = cloudTexture;
+        cloudMaterial.transparent = true;
+
+        return cloudMaterial;
+    }
 
     function addControlGui(controlObject) {
         var gui = new dat.GUI();
         gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
+        gui.addColor(controlObject, 'ambientLightColor');
+        gui.addColor(controlObject, 'directionalLightColor');
     }
 
     function addStatsObject() {
@@ -109,6 +148,11 @@
         cameraControl.update();
 
         scene.getObjectByName('earth').rotation.y+=control.rotationSpeed;
+        scene.getObjectByName('clouds').rotation.y+=control.rotationSpeed*1.1;
+
+        // update light colors
+        scene.getObjectByName('ambient').color = new THREE.Color(control.ambientLightColor);
+        scene.getObjectByName('directional').color = new THREE.Color(control.directionalLightColor);
 
         // and render the scene
         renderer.render(scene, camera);

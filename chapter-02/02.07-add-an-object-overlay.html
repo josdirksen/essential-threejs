@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>02.07 - Object overlay</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/OrbitControls.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/EffectComposer.js"></script>
+    <script src="../libs/RenderPass.js"></script>
+    <script src="../libs/CopyShader.js"></script>
+    <script src="../libs/ShaderPass.js"></script>
+    <script src="../libs/MaskPass.js"></script>
+    <script src="../libs/chroma.min.js"></script>
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            /*overflow: hidden;*/
+            background-color: #fff;
+        }
+    </style>
+</head>
+<script>
+
+// global variables
+var renderer;
+var scene;
+var camera;
+var control;
+var stats;
+var cameraControl;
+
+// background stuff
+var cameraBG;
+var sceneBG;
+var composer;
+var clock;
+var canvas;
+
+/**
+ * Initializes the scene, camera and objects. Called when the window is
+ * loaded by using window.onload (see below)
+ */
+function init() {
+
+    clock = new THREE.Clock();
+
+    // create a scene, that will hold all our elements such as objects, cameras and lights.
+    scene = new THREE.Scene();
+
+    // create a camera, which defines where we're looking at.
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // create a render, sets the background color and the size
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(0x000000, 1.0);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMapEnabled = true;
+
+    // create a sphere
+    var sphereGeometry = new THREE.SphereGeometry(15, 60, 60);
+    var sphereMaterial = createEarthMaterial();
+    var earthMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    earthMesh.name = 'earth';
+    scene.add(earthMesh);
+
+    // create overlay
+    var overlayGeometry = new THREE.SphereGeometry(sphereGeometry.radius, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
+    var overlayMaterial = createOverlayMaterial();
+    var overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
+    overlayMesh.name= 'overlay';
+    scene.add(overlayMesh);
+
+    // create a cloudGeometry, slighly bigger than the original sphere
+    var cloudGeometry = new THREE.SphereGeometry(sphereGeometry.radius * 1.02, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
+    var cloudMaterial = createCloudMaterial();
+    var cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+    cloudMesh.name = 'clouds';
+    scene.add(cloudMesh);
+
+
+
+
+    // now add some better lighting
+    var ambientLight = new THREE.AmbientLight(0x111111);
+    ambientLight.name = 'ambient';
+    scene.add(ambientLight);
+
+    // add sunlight (light
+    var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position = new THREE.Vector3(200, 10, -50);
+    directionalLight.name = 'directional';
+    scene.add(directionalLight);
+
+    // position and point the camera to the center of the scene
+    camera.position.x = 25;
+    camera.position.y = 10;
+    camera.position.z = 63;
+    camera.lookAt(scene.position);
+
+    // add controls
+//    cameraControl = new THREE.OrbitControls(camera);
+
+    // setup the control object for the control gui
+    control = new function () {
+        this.rotationSpeed = 0.001;
+        this.ambientLightColor = ambientLight.color.getHex();
+        this.directionalLightColor = directionalLight.color.getHex();
+    };
+
+    // add extras
+    addControlGui(control);
+//    addStatsObject();
+
+
+    // add background using a camera
+    cameraBG = new THREE.OrthographicCamera(-window.innerWidth, window.innerWidth, window.innerHeight, -window.innerHeight, -10000, 10000);
+    cameraBG.position.z = 50;
+    sceneBG = new THREE.Scene();
+
+    var materialColor = new THREE.MeshBasicMaterial({ map: THREE.ImageUtils.loadTexture("../assets/textures/planets/starry_background.jpg"), depthTest: false });
+    var bgPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), materialColor);
+    bgPlane.position.z = -100;
+    bgPlane.scale.set(window.innerWidth * 2, window.innerHeight * 2, 1);
+    sceneBG.add(bgPlane);
+
+    // setup the composer steps
+    // first render the background
+    var bgPass = new THREE.RenderPass(sceneBG, cameraBG);
+    // next render the scene (rotating earth), without clearing the current output
+    var renderPass = new THREE.RenderPass(scene, camera);
+    renderPass.clear = false;
+    // finally copy the result to the screen
+    var effectCopy = new THREE.ShaderPass(THREE.CopyShader);
+    effectCopy.renderToScreen = true;
+
+    // add these passes to the composer
+    composer = new THREE.EffectComposer(renderer);
+    composer.addPass(bgPass);
+    composer.addPass(renderPass);
+    composer.addPass(effectCopy);
+
+    // add the output of the renderer to the html element
+//    document.body.appendChild(renderer.domElement);
+
+    // call the render function, after the first render, interval is determined
+    // by requestAnimationFrame
+    render();
+}
+
+
+function createEarthMaterial() {
+    // 4096 is the maximum width for maps
+    var earthTexture = THREE.ImageUtils.loadTexture("../assets/textures/planets/earthmap4k.jpg");
+    var bumpMap = THREE.ImageUtils.loadTexture("../assets/textures/planets/earthbump4k.jpg");
+    var specularMap = THREE.ImageUtils.loadTexture("../assets/textures/planets/earthspec4k.jpg");
+    var normalMap = THREE.ImageUtils.loadTexture("../assets/textures/planets/earth_normalmap_flat4k.jpg");
+
+    var earthMaterial = new THREE.MeshPhongMaterial();
+    earthMaterial.map = earthTexture;
+//    earthMaterial.map = new THREE.Texture(addCanvas());
+//    earthMaterial.map.needsUpdate = true;
+
+    // specular defines the reflection of the surface
+    earthMaterial.specularMap = specularMap;
+    earthMaterial.specular = new THREE.Color(0x262626);
+
+    // bumpmap
+//    earthMaterial.bumpMap = bumpMap;
+//    earthMaterial.bumpScale = 0.15;
+
+    // normalmap
+    earthMaterial.normalMap = normalMap;
+    earthMaterial.normalScale = new THREE.Vector2(0.5, 0.7);
+
+
+    return earthMaterial;
+}
+
+function createOverlayMaterial() {
+    var olMaterial = new THREE.MeshPhongMaterial();
+    olMaterial.map = new THREE.Texture(addCanvas());
+    olMaterial.map.needsUpdate = true;
+    olMaterial.transparent = true;
+    olMaterial.opacity = 0.6;
+    return olMaterial;
+}
+
+function addCanvas() {
+    canvas = document.createElement("canvas");
+    canvas.width=2000;
+    canvas.height=1000;
+
+    var limit = 600;
+    var scale = chroma.scale(['red' , 'yellow', 'green', 'blue']).domain([1,600], 100, 'log');
+
+    console.log(scale.domain())
+//    var scale = chroma.scale(['red','yellow' ,'blue']).domain([1,1632], 20, 'log');
+//    var scale = chroma.scale(['#eeeeee', '#000000']).domain([1,1632], 20, 'log');
+
+    var context = canvas.getContext('2d');
+
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+
+            var coords = CSVToArray(xmlhttp.responseText,",");
+//            console.log(ports[0]);
+            // 4 and 5 combined are x together with 6 for sign
+            var max = 0;
+
+            coords.forEach(function(point) {
+
+                var offset = 0;
+                if (point.length > 3) {
+                    offset = 1;
+                }
+
+                if (parseFloat(point[2+offset]) >= 0) {
+                    var lat = parseInt(point[0+offset]);
+                    var lon = parseInt(point[1+offset]);
+                    var value = parseFloat(point[2+offset]);
+
+                     if (value > max) max = value;
+
+                    // lat is from 0 to 180
+                    // lon is from 0 to 360
+
+                    var x = canvas.width/360*((lon)-180);
+                    if (x<=0) {
+                        x=canvas.width-(x*-1);
+                    }
+                    var y = canvas.height/180*lat;
+
+                    if (value >= 0) {
+                        context.beginPath();
+                        context.rect(x,y,4,4);
+//                    context.arc(x, y, 4, 0, 2 * Math.PI, false);
+                        context.fillStyle = scale(value).hex();
+                        context.fill();
+
+                    }
+
+
+//
+//
+//                    var posY = parseFloat( e[4] + "." + e[5]);
+//                    var sign = e[6];
+//                    if (sign === 'S') posY = posY*-1;
+//
+//
+//                    var posX = parseFloat( e[7] + "." + e[8]);
+//                    var sign = e[9];
+//                    if (sign === 'W') posX = posX*-1;
+//
+//
+//                    var x2 =   ((canvas.width/360.0) * (180 + posX));
+//                    var y2 =   ((canvas.height/180.0) * (90 - posY));
+//
+//                    context.beginPath();
+//                    context.arc(x2, y2, 4, 0, 2 * Math.PI, false);
+//                    context.fillStyle = 'red';
+//                    context.fill();
+//
+//                    context.fill();
+//                    context.lineWidth = 2;
+//                    context.strokeStyle = '#003300';
+//                    context.stroke();
+                }
+//                console.log(max);
+
+            });
+            console.log(max);
+
+            // 7 and 8 combined are y together with 9 for sign
+        }
+    }
+
+    xmlhttp.open("GET", "../assets/data/gem.csv", true);
+    xmlhttp.send();
+
+    //get the data, and set the offset, we need to do this since the x,y coordinates
+    //from the data aren't in the correct format
+//    var x = 4.29;
+//    var y = 51.54;
+
+
+    document.body.appendChild(canvas);
+
+
+    return canvas;
+}
+
+function createCloudMaterial() {
+    var cloudTexture = THREE.ImageUtils.loadTexture("../assets/textures/planets/fair_clouds_4k.png");
+
+    var cloudMaterial = new THREE.MeshPhongMaterial();
+    cloudMaterial.map = cloudTexture;
+    cloudMaterial.transparent = true;
+    cloudMaterial.opacity = 0.5;
+    cloudMaterial.blending = THREE.AdditiveBlending;
+
+    return cloudMaterial;
+}
+
+function addControlGui(controlObject) {
+    var gui = new dat.GUI();
+    gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
+    gui.addColor(controlObject, 'ambientLightColor');
+    gui.addColor(controlObject, 'directionalLightColor');
+}
+
+function addStatsObject() {
+    stats = new Stats();
+    stats.setMode(0);
+
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+
+    document.body.appendChild(stats.domElement);
+}
+
+
+/**
+ * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+ * for future renders
+ */
+function render() {
+
+    scene.getObjectByName('overlay').material.map.needsUpdate = true;
+
+    // update stats
+    stats.update();
+
+    // update the camera
+    cameraControl.update();
+
+    scene.getObjectByName('earth').rotation.y += control.rotationSpeed;
+    scene.getObjectByName('overlay').rotation.y += control.rotationSpeed;
+    scene.getObjectByName('clouds').rotation.y += control.rotationSpeed * 1.1;
+
+    // update light colors
+    scene.getObjectByName('ambient').color = new THREE.Color(control.ambientLightColor);
+    scene.getObjectByName('directional').color = new THREE.Color(control.directionalLightColor);
+
+    // and render the scene, renderer shouldn't autoclear, we let the composer steps do that themselves
+    // rendering is now done through the composer, which executes the render steps
+    renderer.autoClear = false;
+    composer.render();
+
+    // render using requestAnimationFrame
+    requestAnimationFrame(render);
+}
+
+
+/**
+ * Function handles the resize event. This make sure the camera and the renderer
+ * are updated at the correct moment.
+ */
+function handleResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// calls the init function when the window is done loading.
+window.onload = init;
+// calls the handleResize function when the window is resized
+window.addEventListener('resize', handleResize, false);
+
+
+// This will parse a delimited string into an array of
+// arrays. The default delimiter is the comma, but this
+// can be overriden in the second argument.
+// via http://stackoverflow.com/questions/1293147/javascript-code-to-parse-csv-data
+function CSVToArray( strData, strDelimiter ){
+    // Check to see if the delimiter is defined. If not,
+    // then default to comma.
+    strDelimiter = (strDelimiter || ",");
+
+    // Create a regular expression to parse the CSV values.
+    var objPattern = new RegExp(
+            (
+                // Delimiters.
+                    "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
+
+                        // Quoted fields.
+                            "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+
+                        // Standard fields.
+                            "([^\"\\" + strDelimiter + "\\r\\n]*))"
+                    ),
+            "gi"
+    );
+
+
+    // Create an array to hold our data. Give the array
+    // a default empty first row.
+    var arrData = [[]];
+
+    // Create an array to hold our individual pattern
+    // matching groups.
+    var arrMatches = null;
+
+
+    // Keep looping over the regular expression matches
+    // until we can no longer find a match.
+    while (arrMatches = objPattern.exec( strData )){
+
+        // Get the delimiter that was found.
+        var strMatchedDelimiter = arrMatches[ 1 ];
+
+        // Check to see if the given delimiter has a length
+        // (is not the start of string) and if it matches
+        // field delimiter. If id does not, then we know
+        // that this delimiter is a row delimiter.
+        if (
+                strMatchedDelimiter.length &&
+                        (strMatchedDelimiter != strDelimiter)
+                ){
+
+            // Since we have reached a new row of data,
+            // add an empty row to our data array.
+            arrData.push( [] );
+
+        }
+
+
+        // Now that we have our delimiter out of the way,
+        // let's check to see which kind of value we
+        // captured (quoted or unquoted).
+        if (arrMatches[ 2 ]){
+
+            // We found a quoted value. When we capture
+            // this value, unescape any double quotes.
+            var strMatchedValue = arrMatches[ 2 ].replace(
+                    new RegExp( "\"\"", "g" ),
+                    "\""
+            );
+
+        } else {
+
+            // We found a non-quoted value.
+            var strMatchedValue = arrMatches[ 3 ];
+
+        }
+
+
+        // Now that we have our value string, let's add
+        // it to the data array.
+        arrData[ arrData.length - 1 ].push( strMatchedValue );
+    }
+
+    // Return the parsed data.
+    return( arrData );
+}
+</script>
+<body>
+</body>
+</html>
