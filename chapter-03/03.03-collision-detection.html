@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>01.06 - Statistics</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/tween.js"></script>
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<script>
+
+    // global variables
+    var renderer;
+    var scene;
+    var camera;
+    var control;
+    var stats;
+
+    var collidableMeshList = [];
+
+    var isTweening = false;
+
+    function createCube() {
+
+        var cubeGeometry = new THREE.CubeGeometry(2, 2, 2);
+        var cubeMaterial = new THREE.MeshLambertMaterial({color: 0xff0000, transparent: true, opacity: 0.6});
+        var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.castShadow = true;
+        cube.name = 'cube';
+        cube.position = new THREE.Vector3(2, 1, 0);
+        scene.add(cube);
+        return cube;
+    }
+    /**
+     * Initializes the scene, camera and objects. Called when the window is
+     * loaded by using window.onload (see below)
+     */
+    function init() {
+
+        // create a scene, that will hold all our elements such as objects, cameras and lights.
+        scene = new THREE.Scene();
+
+        // create a camera, which defines where we're looking at.
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        // create a render, sets the background color and the size
+        renderer = new THREE.WebGLRenderer();
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMapEnabled = true;
+
+        // create the ground plane
+        var planeGeometry = new THREE.PlaneGeometry(120, 120, 20, 20);
+        var planeMaterial = new THREE.MeshLambertMaterial({color: 0xcccccc});
+        var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.receiveShadow = true;
+
+        // rotate and position the plane
+        plane.rotation.x = -0.5 * Math.PI;
+        plane.position.x = 0;
+        plane.position.y = 0;
+        plane.position.z = 0;
+
+        // add the plane to the scene
+        scene.add(plane);
+
+
+        var cube2 = new THREE.CubeGeometry(4, 6, 4);
+        var cubeMaterial = new THREE.MeshLambertMaterial({color: 0x00ff00, transparent: true, opacity: 0.6});
+        var cube2Mesh = new THREE.Mesh(cube2, cubeMaterial);
+        cube2Mesh.position.x = 20;
+        cube2Mesh.position.z = 10;
+
+        var obs2 = cube2Mesh.clone();
+        obs2.position.set(15,2,0);
+        scene.add(obs2);
+
+        var obs3 = cube2Mesh.clone();
+        obs3.position.set(-4 ,2,6);
+        scene.add(obs3);
+
+        scene.add(cube2Mesh);
+        collidableMeshList.push(cube2Mesh);
+        collidableMeshList.push(obs2);
+        collidableMeshList.push(obs3);
+        var cube = createCube();
+
+        // position and point the camera to the center of the scene
+        camera.position.x = 30;
+        camera.position.y = 36;
+        camera.position.z = 35;
+        camera.lookAt(scene.position);
+
+        // add spotlight for the shadows
+        var spotLight = new THREE.SpotLight(0xffffff);
+        spotLight.position.set(20, 60, 20);
+        spotLight.shadowCameraNear = 10;
+        spotLight.shadowCameraFar = 150;
+        spotLight.castShadow = true;
+
+        scene.add(spotLight);
+
+
+        // setup the control object for the control gui
+        control = new function () {
+            this.rotationSpeed = 0.005;
+            this.opacity = 0.6;
+            this.color = cube.material.color.getHex();
+
+            this.forward = function () {
+                takeStepForward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
+            this.back = function () {
+                takeStepBackward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
+            this.left = function () {
+                takeStepLeft(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
+            this.right = function () {
+                takeStepRight(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
+        };
+
+        // add extras
+        addControlGui(control);
+        addStatsObject();
+
+
+        // add the output of the renderer to the html element
+        document.body.appendChild(renderer.domElement);
+
+        console.log('Log statement from the init function');
+        console.log(cube);
+
+
+        // call the render function, after the first render, interval is determined
+        // by requestAnimationFrame
+        render();
+    }
+
+    function takeStepRight(cube, start, end, time) {
+        var cubeGeometry = cube.geometry;
+        var widht = cube.geometry.width;
+        if (!isTweening) {
+            var tween = new TWEEN.Tween({ x: start, cube: cube, previous: 0})
+                    .to({ x: end }, time )
+                .easing(TWEEN.Easing.Linear.None)
+                .onStart(function () {
+                        isTweening = true;
+                    cube.position.y += -widht / 2;
+                    cube.position.z += -widht / 2;
+                    cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, widht / 2, widht / 2));
+                })
+                .onUpdate(function () {
+                    cube.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-(this.x - this.previous)));
+                    cube.geometry.verticesNeedUpdate = true;
+                    cube.geometry.normalsNeedUpdate = true;
+                    this.previous = this.x;
+                })
+                .onComplete(function () {
+                    cube.position.y += widht/2;
+                    cube.position.z += -widht/2;
+                    cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, -widht / 2, widht / 2));
+                    cube.position.x = Math.round(cube.position.x);
+                    cube.position.y = Math.round(cube.position.y);
+                    cube.position.z = Math.round(cube.position.z);
+                    isTweening = false;
+                })
+                .start();
+        }
+    }
+
+    function takeStepLeft(cube, start, end, time) {
+        var cubeGeometry = cube.geometry;
+        var widht = cube.geometry.width;
+        if (!isTweening) {
+            var tween = new TWEEN.Tween({ x: start, cube: cube, previous: 0})
+                    .to({ x: end }, time )
+                    .easing(TWEEN.Easing.Linear.None)
+                    .onStart(function () {
+                        isTweening = true;
+                        cube.position.y += -widht / 2;
+                        cube.position.z += widht / 2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, widht / 2, -widht / 2));
+                    })
+                    .onUpdate(function () {
+                        cube.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(this.x - this.previous));
+                        cube.geometry.verticesNeedUpdate = true;
+                        cube.geometry.normalsNeedUpdate = true;
+                        this.previous = this.x;
+                    })
+                    .onComplete(function () {
+                        cube.position.y += widht/2;
+                        cube.position.z += widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, -widht / 2, -widht / 2));
+                        cube.position.x = Math.round(cube.position.x);
+                        cube.position.y = Math.round(cube.position.y);
+                        cube.position.z = Math.round(cube.position.z);
+                        isTweening = false;
+                    })
+                    .start();
+        }
+    }
+
+    function takeStepBackward(cube, start, end, time) {
+        var widht = cube.geometry.width;
+        var cubeGeometry = cube.geometry;
+
+        if (!isTweening) {
+            var tween = new TWEEN.Tween( { x: start, cube: cube, previous: 0} )
+                    .to( { x: end }, time )
+                    .easing( TWEEN.Easing.Linear.None )
+                    .onStart( function() {
+                        isTweening = true;
+                        cube.position.y+=-widht/2;
+                        cube.position.x+=widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( -widht/2,  widht/2, 0 ) );
+                    })
+                    .onUpdate( function () {
+                        cube.geometry.applyMatrix( new THREE.Matrix4().makeRotationZ( -(this.x-this.previous) ) );
+                        cube.geometry.verticesNeedUpdate=true;
+                        cube.geometry.normalsNeedUpdate = true;
+                        cube.previous = this.x;
+                        this.previous = this.x;
+                    } )
+                    .onComplete(function() {
+                        cube.position.y+=widht/2;
+                        cube.position.x+=widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( -widht/2, -widht/2, 0 ) );
+                        cube.position.x=Math.round(cube.position.x);
+                        cube.position.y=Math.round(cube.position.y);
+                        cube.position.z=Math.round(cube.position.z);
+                        isTweening = false;
+                    })
+                    .start();
+        }
+    }
+
+    function takeStepForward(cube, start, end, time) {
+        var widht = cube.geometry.width;
+        var cubeGeometry = cube.geometry;
+
+        if (!isTweening) {
+            var tween = new TWEEN.Tween( { x: start, cube: cube, previous: 0} )
+                    .to( { x: end }, time )
+                    .easing( TWEEN.Easing.Linear.None )
+                    .onStart( function() {
+                        isTweening = true;
+                        cube.position.y+=-widht/2;
+                        cube.position.x+=-widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( widht/2,  widht/2, 0 ) );
+                    })
+                    .onUpdate( function () {
+                        cube.geometry.applyMatrix( new THREE.Matrix4().makeRotationZ( (this.x-this.previous) ) );
+
+                        cube.geometry.verticesNeedUpdate=true;
+                        cube.geometry.normalsNeedUpdate = true;
+
+                        cube.previous = this.x;
+                        this.previous = this.x;
+                    } )
+                    .onComplete(function() {
+                        cube.position.y+=widht/2;
+                        cube.position.x+=-widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( widht/2, -widht/2, 0 ) );
+
+                        cube.position.x=Math.round(cube.position.x);
+                        cube.position.y=Math.round(cube.position.y);
+                        cube.position.z=Math.round(cube.position.z);
+
+                        isTweening = false;
+                    })
+                    .start();
+        }
+    }
+
+
+    function addControlGui(controlObject) {
+        var gui = new dat.GUI();
+        gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
+        gui.add(controlObject, 'opacity', 0.1, 1);
+        gui.addColor(controlObject, 'color');
+        gui.add(controlObject,'forward');
+        gui.add(controlObject,'back');
+        gui.add(controlObject,'left');
+        gui.add(controlObject,'right');
+
+    }
+
+    function addStatsObject() {
+        stats = new Stats();
+        stats.setMode(0);
+
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.left = '0px';
+        stats.domElement.style.top = '0px';
+
+        document.body.appendChild( stats.domElement );
+    }
+
+
+
+    /**
+     * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+     * for future renders
+     */
+    function render() {
+
+        // update stats
+        stats.update();
+
+        TWEEN.update();
+
+        // collision detection:
+        //   determines if any of the rays from the cube's origin to each vertex
+        //		intersects any face of a mesh in the array of target meshes
+        //   for increased collision accuracy, add more vertices to the cube;
+        //		for example, new THREE.CubeGeometry( 64, 64, 64, 8, 8, 8, wireMaterial )
+        //   HOWEVER: when the origin of the ray is within the target mesh, collisions do not occur
+        var cube = scene.getObjectByName('cube');
+        var originPoint = cube.position.clone();
+
+
+
+        for (var vertexIndex = 0; vertexIndex < cube.geometry.vertices.length; vertexIndex++)
+        {
+            var localVertex = cube.geometry.vertices[vertexIndex].clone();
+            var globalVertex = localVertex.applyMatrix4( cube.matrix );
+            var directionVector = globalVertex.sub( cube.position );
+
+            var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
+            var collisionResults = ray.intersectObjects( collidableMeshList );
+            if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() )
+            {
+
+                // if we've got a hit, we just stop the current walk and reset to base point
+                var tweens = TWEEN.getAll();
+
+                if (tweens.length > 0) {
+
+                    tweens[0].stop();
+                    TWEEN.removeAll();
+                    isTweening = false;
+
+                    scene.remove(cube);
+                    cube = createCube();
+                }
+            }
+
+
+        }
+
+        // and render the scene
+        renderer.render(scene, camera);
+
+
+
+        // render using requestAnimationFrame
+        requestAnimationFrame(render);
+    }
+
+    function rotateAroundWorldAxis(object, axis, radians) {
+        var rotWorldMatrix = new THREE.Matrix4();
+        rotWorldMatrix.makeRotationAxis(axis.normalize(), radians);
+
+        // old code for Three.JS pre r54:
+        //  rotWorldMatrix.multiply(object.matrix);
+        // new code for Three.JS r55+:
+        rotWorldMatrix.multiply(object.matrix);                // pre-multiply
+        object.matrix = rotWorldMatrix;
+
+        // old code for Three.js pre r49:
+        // object.rotation.getRotationFromMatrix(object.matrix, object.scale);
+        // old code for Three.js pre r59:
+        // object.rotation.setEulerFromRotationMatrix(object.matrix);
+        // code for r59+:
+        object.rotation.setFromRotationMatrix(object.matrix);
+    }
+
+    /**
+     * Function handles the resize event. This make sure the camera and the renderer
+     * are updated at the correct moment.
+     */
+    function handleResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // calls the init function when the window is done loading.
+    window.onload = init;
+    // calls the handleResize function when the window is resized
+    window.addEventListener('resize', handleResize, false);
+
+</script>
+<body>
+</body>
+</html>

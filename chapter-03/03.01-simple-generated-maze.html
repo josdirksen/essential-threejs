@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>03.02 - Simple generated mazes</title>
+    <title>03.01 - Simple generated mazes</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
@@ -43,7 +43,7 @@
         // create a scene, that will hold all our elements such as objects, cameras and lights.
         scene = new THREE.Scene();
 
-        var maze = new Maze(document,'maze', scene,15, 150, 100);
+        var maze = new Maze(document,'maze', scene,17, 100, 100);
         maze.generate();
         maze.draw();
 
@@ -82,8 +82,8 @@
         spotLight.shadowCameraFar = 50;
         spotLight.castShadow = true;
 
-//        var ambientLight = new THREE.AmbientLight(0x222222);
-//        scene.add(ambientLight);
+        var ambientLight = new THREE.AmbientLight(0x080808);
+        scene.add(ambientLight);
 
         scene.add(spotLight);
 
