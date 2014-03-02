@@ -4,7 +4,7 @@ var Maze = function (doc, elemId, scene, cells, width, height) {
 
     this.width = width;
     this.height = height;
-//  this.ctx = this.canvas.getContext('2d');
+
     this.horizCells = cells;
     this.vertCells = cells;
     this.generator = new MazeGenerator(this.horizCells, this.vertCells);
@@ -12,9 +12,6 @@ var Maze = function (doc, elemId, scene, cells, width, height) {
     this.cellHeight = this.height / this.vertCells;
 
     var self = this;
-
-//  self.ctx.strokeStyle = "rgb(0, 0, 0)";
-//  self.ctx.fillStyle = "rgba(255, 0, 0, 0.1)";
 
     return {
         width: function () {
@@ -130,14 +127,13 @@ var Maze = function (doc, elemId, scene, cells, width, height) {
             if (lengthY === 0) lengthY = 0.5;
 
             // create a cube to represent the wall segment
-            var wallGeom = new THREE.CubeGeometry(lengthX, 4, lengthY);
+            var wallGeom = new THREE.CubeGeometry(lengthX, 2, lengthY);
             var wallMaterial = new THREE.MeshLambertMaterial({color: 0xff0000, opacity: 0.9, transparent: true});
 
             // and create the complete wall segment
             var wallMesh = new THREE.Mesh(wallGeom, wallMaterial);
 
             // finally position it correctly
-//            wallMesh.position = new THREE.Vector3(x1 - ((x1 - x2) / 2) + this.width/2, 0, y1 - ((y1 - y2)) / 2) + this.height/2;
             wallMesh.position = new THREE.Vector3(x1 - ((x1 - x2) / 2) -(self.height/2), 0, y1 - ((y1 - y2)) / 2 - (self.width /2));
             scene.add(wallMesh);
         }
