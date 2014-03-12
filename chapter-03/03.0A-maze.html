@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTML5 maze</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <!--// load the maze related scripts-->
+    <!--// based on: http://felipecsl.com/random-maze-generator/-->
+    <script src="../libs/maze/array.js"></script>
+    <script src="../libs/maze/cell.js"></script>
+    <script src="../libs/maze/graph.js"></script>
+    <script src="../libs/maze/maze-orig.js"></script>
+    <script src="../libs/maze/mazeGenerator.js"></script>
+    <script src="../libs/maze/underscore-min.js"></script>
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            /*margin: 0;*/
+            /*overflow: hidden;*/
+        }
+    </style>
+</head>
+<script>
+
+
+
+
+    /**
+     * Initializes the scene, camera and objects. Called when the window is
+     * loaded by using window.onload (see below)
+     */
+    function init() {
+        var maze = new Maze(document,'maze');
+        maze.generate();
+        maze.draw();
+    }
+
+    // calls the init function when the window is done loading.
+    window.onload = init;
+
+</script>
+<body>
+
+ <canvas id="maze" width="400" height="400"></canvas>
+</body>
+</html>

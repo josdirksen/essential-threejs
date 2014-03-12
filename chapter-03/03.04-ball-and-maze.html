@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>01.06 - Statistics</title>
+    <title>03.04 - Ball and maze</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
+    <!--// load the maze related scripts-->
+    <!--// based on: http://felipecsl.com/random-maze-generator/-->
+    <script src="../libs/maze/array.js"></script>
+    <script src="../libs/maze/cell.js"></script>
+    <script src="../libs/maze/graph.js"></script>
+    <script src="../libs/maze/maze.js"></script>
+    <script src="../libs/maze/mazeGenerator.js"></script>
+    <script src="../libs/maze/underscore-min.js"></script>
+    <script src="../libs/tween.js"></script>
+    <script src="../libs/TrackballControls.js"></script>
+
     <style>
         body {
             /* set margin to 0 and overflow to hidden, to go fullscreen */
@@ -15,12 +26,33 @@
 </head>
 <script>
 
+
+
     // global variables
     var renderer;
     var scene;
     var camera;
     var control;
     var stats;
+    var isTweening = false;
+    var controls;
+
+
+    var collidableMeshList = [];
+
+    var width = 150;
+
+    function createCube() {
+
+        var cubeGeometry = new THREE.CubeGeometry(2, 2, 2);
+        var cubeMaterial = new THREE.MeshPhongMaterial({color: 0x0000ff, transparent: true, opacity: 0.8});
+        var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.castShadow = true;
+        cube.name = 'cube';
+        cube.position = new THREE.Vector3(width/2 - 3, 1, width/2 - 3);
+        scene.add(cube);
+        return cube;
+    }
 
     /**
      * Initializes the scene, camera and objects. Called when the window is
@@ -28,8 +60,22 @@
      */
     function init() {
 
+
+
         // create a scene, that will hold all our elements such as objects, cameras and lights.
         scene = new THREE.Scene();
+
+        // generate a maze
+        var maze = new Maze(scene,15, width, width);
+        maze.generate();
+//        maze.draw();
+        var walls = maze.getElements();
+        walls.forEach(function(e) {collidableMeshList.push(e)});
+
+
+
+        // add cube
+        createCube();
 
         // create a camera, which defines where we're looking at.
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -41,50 +87,95 @@
         renderer.shadowMapEnabled = true;
 
         // create the ground plane
-        var planeGeometry = new THREE.PlaneGeometry(20, 20);
-        var planeMaterial = new THREE.MeshLambertMaterial({color: 0xcccccc});
+        var planeGeometry = new THREE.PlaneGeometry(width, width, 40, 40);
+        var planeMaterial = new THREE.MeshPhongMaterial({color: 0xffffff});
+        planeMaterial.map = THREE.ImageUtils.loadTexture("../assets/textures/wood_1-1024x1024.png")
+        planeMaterial.map.wrapS = planeMaterial.map.wrapT = THREE.RepeatWrapping;
+        planeMaterial.map.repeat.set( 4, 4 );
         var plane = new THREE.Mesh(planeGeometry, planeMaterial);
         plane.receiveShadow = true;
 
         // rotate and position the plane
         plane.rotation.x = -0.5 * Math.PI;
-        plane.position.x = 0;
-        plane.position.y = -2;
-        plane.position.z = 0;
+//        plane.position.y = ;
 
         // add the plane to the scene
         scene.add(plane);
 
-        // create a cube
-        var cubeGeometry = new THREE.CubeGeometry(6, 4, 6);
-        var cubeMaterial = new THREE.MeshLambertMaterial({color: 0xff0000, transparent:true, opacity:0.6});
-        var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube.name='cube';
-        cube.castShadow = true;
+        var startWall = new THREE.CubeGeometry(10,2,1);
+        var startMesh = new THREE.Mesh(startWall);
+        startMesh.position.set(width/2-5,0,width/2);
+        scene.add(startMesh);
+        collidableMeshList.push(startMesh);
 
-        // add the cube to the scene
-        scene.add(cube);
+        var endWall = new THREE.CubeGeometry(10,2,1);
+        var endMesh = new THREE.Mesh(endWall);
+        endMesh.position.set(-width/2+5,0,-width/2);
+        scene.add(endMesh);
+        collidableMeshList.push(endMesh);
 
         // position and point the camera to the center of the scene
-        camera.position.x = 15;
-        camera.position.y = 16;
-        camera.position.z = 13;
-        camera.lookAt(scene.position);
+        camera.position.x = 70;
+        camera.position.y = 130;
+        camera.position.z = 130;
+        camera.lookAt(new THREE.Vector3(10,0,35));
+        controls = new THREE.TrackballControls( camera );
 
-        // add spotlight for the shadows
-        var spotLight = new THREE.SpotLight(0xffffff);
-        spotLight.position.set(10, 20, 20);
-        spotLight.shadowCameraNear = 20;
-        spotLight.shadowCameraFar = 50;
-        spotLight.castShadow = true;
+        // add spotlight for the finish line
+        var finishLight = new THREE.SpotLight(0xff0000);
+        finishLight.position.set(-50, 70, -50);
+        finishLight.shadowCameraNear = 20;
+        finishLight.shadowCameraFar = 50;
+        finishLight.castShadow = true;
+        finishLight.intensity = 0.5;
+        
+        var finishTarget = new THREE.Object3D();
+        finishTarget.position.set(-60,0,-60);
+        finishLight.target = finishTarget;
+        
+        scene.add(finishLight);
 
-        scene.add(spotLight);
+        // add spotlight for the starting point
+        var startLight = new THREE.SpotLight(0x00ff00);
+        startLight.position.set(50, 70, 50);
+        startLight.shadowCameraNear = 10;
+        startLight.shadowCameraFar = 50;
+        startLight.castShadow = true;
+        startLight.intensity = 0.5;
+
+        var startTarget = new THREE.Object3D();
+        startTarget.position.set(60,0,60);
+        startLight.target = startTarget;
+
+        scene.add(startLight);
+
+        // add directionlight for general illumination
+        var directionalLight = new THREE.DirectionalLight({color:0xaaaaaa});
+        directionalLight.castShadow = true;
+        directionalLight.position.set(0,50,50);
+        directionalLight.intensity = 0.6;
+
+        scene.add(directionalLight);
+
 
         // setup the control object for the control gui
-        control = new function() {
-            this.rotationSpeed = 0.005;
-            this.opacity = 0.6;
-            this.color = cubeMaterial.color.getHex();
+
+        // setup the control object for the control gui
+        control = new function () {
+
+
+            this.forward = function () {
+                takeStepForward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
+            this.back = function () {
+                takeStepBackward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
+            this.left = function () {
+                takeStepLeft(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
+            this.right = function () {
+                takeStepRight(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
+            };
         };
 
         // add extras
@@ -95,10 +186,6 @@
         // add the output of the renderer to the html element
         document.body.appendChild(renderer.domElement);
 
-        console.log('Log statement from the init function');
-        console.log(cube);
-
-
         // call the render function, after the first render, interval is determined
         // by requestAnimationFrame
         render();
@@ -107,9 +194,11 @@
 
     function addControlGui(controlObject) {
         var gui = new dat.GUI();
-        gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
-        gui.add(controlObject, 'opacity', 0.1, 1);
-        gui.addColor(controlObject, 'color');
+        gui.add(controlObject,'forward');
+        gui.add(controlObject,'back');
+        gui.add(controlObject,'left');
+        gui.add(controlObject,'right');
+
     }
 
     function addStatsObject() {
@@ -129,17 +218,6 @@
      * for future renders
      */
     function render() {
-        // update the camera
-        var rotSpeed = control.rotationSpeed;
-        camera.position.x = camera.position.x * Math.cos(rotSpeed) + camera.position.z * Math.sin(rotSpeed);
-        camera.position.z = camera.position.z * Math.cos(rotSpeed) - camera.position.x * Math.sin(rotSpeed);
-        camera.lookAt(scene.position);
-
-        // change opacity
-        scene.getObjectByName('cube').material.opacity = control.opacity;
-
-        // change color
-        scene.getObjectByName('cube').material.color = new THREE.Color(control.color);
 
         // update stats
         stats.update();
@@ -147,8 +225,195 @@
         // and render the scene
         renderer.render(scene, camera);
 
+        TWEEN.update();
+
+        detectCollision();
+
+        controls.update();
+
         // render using requestAnimationFrame
         requestAnimationFrame(render);
+    }
+
+    function detectCollision() {
+        // collision detection:
+        //   determines if any of the rays from the cube's origin to each vertex
+        //		intersects any face of a mesh in the array of target meshes
+        //   for increased collision accuracy, add more vertices to the cube;
+        //		for example, new THREE.CubeGeometry( 64, 64, 64, 8, 8, 8, wireMaterial )
+        //   HOWEVER: when the origin of the ray is within the target mesh, collisions do not occur
+        var cube = scene.getObjectByName('cube');
+        var originPoint = cube.position.clone();
+
+
+        for (var vertexIndex = 0; vertexIndex < cube.geometry.vertices.length; vertexIndex++)
+        {
+            var localVertex = cube.geometry.vertices[vertexIndex].clone();
+            var globalVertex = localVertex.applyMatrix4( cube.matrix );
+            var directionVector = globalVertex.sub( cube.position );
+
+            var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
+            var collisionResults = ray.intersectObjects( collidableMeshList );
+
+            if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() )
+            {
+
+                // if we've got a hit, we just stop the current walk and reset to base point
+                var tweens = TWEEN.getAll();
+
+                if (tweens.length > 0) {
+
+                    tweens[0].stop();
+                    TWEEN.removeAll();
+                    isTweening = false;
+
+                    scene.remove(cube);
+                    cube = createCube();
+                }
+            }
+        }
+    }
+
+    function takeStepRight(cube, start, end, time) {
+        var cubeGeometry = cube.geometry;
+        var widht = 4;
+        if (!isTweening) {
+            var tween = new TWEEN.Tween({ x: start, cube: cube, previous: 0})
+                    .to({ x: end }, time )
+                    .easing(TWEEN.Easing.Linear.None)
+                    .onStart(function () {
+                        isTweening = true;
+                        cube.position.y += -widht / 2;
+                        cube.position.z += -widht / 2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, widht / 2, widht / 2));
+                    })
+                    .onUpdate(function () {
+                        cube.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-(this.x - this.previous)));
+                        cube.geometry.verticesNeedUpdate = true;
+                        cube.geometry.normalsNeedUpdate = true;
+                        this.previous = this.x;
+                    })
+                    .onComplete(function () {
+                        cube.position.y += 2;
+                        cube.position.z += -2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, -widht / 2, widht / 2));
+                        cube.position.x = Math.round(cube.position.x);
+                        cube.position.y = Math.round(cube.position.y);
+                        cube.position.z = Math.round(cube.position.z);
+                        isTweening = false;
+                    })
+                    .start();
+        }
+    }
+
+    function takeStepLeft(cube, start, end, time) {
+        var cubeGeometry = cube.geometry;
+        var widht = 4;
+        if (!isTweening) {
+            var tween = new TWEEN.Tween({ x: start, cube: cube, previous: 0})
+                    .to({ x: end }, time )
+                    .easing(TWEEN.Easing.Linear.None)
+                    .onStart(function () {
+                        isTweening = true;
+                        cube.position.y += -widht / 2;
+                        cube.position.z += widht / 2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, widht / 2, -widht / 2));
+                    })
+                    .onUpdate(function () {
+                        cube.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(this.x - this.previous));
+                        cube.geometry.verticesNeedUpdate = true;
+                        cube.geometry.normalsNeedUpdate = true;
+                        this.previous = this.x;
+                    })
+                    .onComplete(function () {
+                        cube.position.y += 2;
+                        cube.position.z += 2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, -widht / 2, -widht / 2));
+                        cube.position.x = Math.round(cube.position.x);
+                        cube.position.y = Math.round(cube.position.y);
+                        cube.position.z = Math.round(cube.position.z);
+                        isTweening = false;
+                    })
+                    .start();
+        }
+    }
+
+    function takeStepBackward(cube, start, end, time) {
+        var widht = 4;
+        var cubeGeometry = cube.geometry;
+
+        if (!isTweening) {
+            var tween = new TWEEN.Tween( { x: start, cube: cube, previous: 0} )
+                    .to( { x: end }, time )
+                    .easing( TWEEN.Easing.Linear.None )
+                    .onStart( function() {
+
+                        isTweening = true;
+                        cube.position.y+=-widht/2;
+                        cube.position.x+=widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( -widht/2,  widht/2, 0 ) );
+                    })
+                    .onUpdate( function () {
+                        cube.geometry.applyMatrix( new THREE.Matrix4().makeRotationZ( -(this.x-this.previous) ) );
+                        cube.geometry.verticesNeedUpdate=true;
+                        cube.geometry.normalsNeedUpdate = true;
+                        cube.previous = this.x;
+                        this.previous = this.x;
+                    } )
+                    .onComplete(function() {
+                        cube.position.y+=2;
+                        cube.position.x+=2;
+
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( -widht/2, -widht/2, 0 ) );
+
+                        cube.position.x=Math.round(cube.position.x);
+                        cube.position.y=Math.round(cube.position.y);
+                        cube.position.z=Math.round(cube.position.z);
+
+                        isTweening = false;
+                    })
+                    .start();
+        }
+    }
+
+    function takeStepForward(cube, start, end, time) {
+        var widht = 4;
+        var cubeGeometry = cube.geometry;
+
+
+
+        if (!isTweening) {
+            var tween = new TWEEN.Tween( { x: start, cube: cube, previous: 0} )
+                    .to( { x: end }, time )
+                    .easing( TWEEN.Easing.Linear.None )
+                    .onStart( function() {
+                        isTweening = true;
+                        cube.position.y+=-widht/2;
+                        cube.position.x+=-widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( widht/2,  widht/2, 0 ) );
+                    })
+                    .onUpdate( function () {
+                        cube.geometry.applyMatrix( new THREE.Matrix4().makeRotationZ( (this.x-this.previous) ) );
+
+                        cube.geometry.verticesNeedUpdate=true;
+                        cube.geometry.normalsNeedUpdate = true;
+
+                        cube.previous = this.x;
+                        this.previous = this.x;
+                    } )
+                    .onComplete(function() {
+                        cube.position.y+=widht/2;
+                        cube.position.x+=-widht/2;
+                        cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( widht/2, -widht/2, 0 ) );
+
+                        cube.position.x=Math.round(cube.position.x);
+                        cube.position.y=Math.round(cube.position.y);
+                        cube.position.z=Math.round(cube.position.z);
+
+                        isTweening = false;
+                    })
+                    .start();
+        }
     }
 
 
@@ -169,5 +434,7 @@
 
 </script>
 <body>
+
+<!--<canvas id="maze" width="100" height="100"></canvas>-->
 </body>
 </html>

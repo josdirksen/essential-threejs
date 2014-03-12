@@ -79,11 +79,13 @@
         cube2Mesh.position.z = 10;
 
         var obs2 = cube2Mesh.clone();
-        obs2.position.set(15,2,0);
+        obs2.position.set(15,0,0);
+        obs2.material=cubeMaterial.clone();
         scene.add(obs2);
 
         var obs3 = cube2Mesh.clone();
-        obs3.position.set(-4 ,2,6);
+        obs3.position.set(-4 ,0,6);
+        obs3.material=cubeMaterial.clone();
         scene.add(obs3);
 
         scene.add(cube2Mesh);
@@ -93,8 +95,8 @@
         var cube = createCube();
 
         // position and point the camera to the center of the scene
-        camera.position.x = 30;
-        camera.position.y = 36;
+        camera.position.x = 20;
+        camera.position.y = 26;
         camera.position.z = 35;
         camera.lookAt(scene.position);
 
@@ -305,6 +307,23 @@
         document.body.appendChild( stats.domElement );
     }
 
+    var projector = new THREE.Projector();
+    function onDocumentMouseDown( event ) {
+
+        event.preventDefault();
+
+        var vector = new THREE.Vector3( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1, 0.5 );
+        projector.unprojectVector(vector,camera);
+
+        var raycaster = new THREE.Raycaster(camera.position,vector.sub(camera.position).normalize() );
+        var intersects = raycaster.intersectObjects( collidableMeshList );
+
+        if ( intersects.length > 0 ) {
+            intersects[ 0 ].object.material.transparent=true;
+            intersects[ 0 ].object.material.color=new THREE.Color(0x0000ff);
+        }
+    }
+
 
 
     /**
@@ -398,6 +417,7 @@
     window.onload = init;
     // calls the handleResize function when the window is resized
     window.addEventListener('resize', handleResize, false);
+    window.onmousedown=onDocumentMouseDown;
 
 </script>
 <body>

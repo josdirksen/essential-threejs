@@ -43,7 +43,7 @@
         // create a scene, that will hold all our elements such as objects, cameras and lights.
         scene = new THREE.Scene();
 
-        var maze = new Maze(document,'maze', scene,17, 100, 100);
+        var maze = new Maze(scene,17, 100, 100);
         maze.generate();
         maze.draw();
 
@@ -64,7 +64,7 @@
 
         // rotate and position the plane
         plane.rotation.x = -0.5 * Math.PI;
-        plane.position.y = -2;
+        plane.position.y = 0;
 
         // add the plane to the scene
         scene.add(plane);
