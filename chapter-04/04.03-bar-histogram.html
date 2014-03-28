@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>04.03 - Output histogram with colors</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/chroma.min.js"></script>
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<script>
+
+// global variables
+var renderer;
+var scene;
+var camera;
+var control;
+var stats;
+
+var scale = chroma.scale(['orange','red','white']).domain([0,255]);
+
+var pm = new THREE.ParticleBasicMaterial();
+pm.map = THREE.ImageUtils.loadTexture("../assets/textures/particles/particle.png");
+pm.blending= THREE.AdditiveBlending;
+pm.transparent = true;
+pm.size=1.5;
+pm.vertexColors = true;
+//pm.color = new THREE.Color(0x00ff00);
+
+var systems = [];
+
+/**
+ * Initializes the scene, camera and objects. Called when the window is
+ * loaded by using window.onload (see below)
+ */
+function init() {
+
+    // create a scene, that will hold all our elements such as objects, cameras and lights.
+    scene = new THREE.Scene();
+
+    // create a camera, which defines where we're looking at.
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // create a render, sets the background color and the size
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(0x080808, 1.0);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMapEnabled = true;
+
+    // create the ground plane
+    var planeGeometry = new THREE.PlaneGeometry(20, 12);
+    var planeMaterial = new THREE.MeshBasicMaterial({color: 0x444444});
+    var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.receiveShadow = true;
+
+    // rotate and position the plane
+    plane.rotation.x = -0.5 * Math.PI;
+    plane.position.x = 0;
+    plane.position.y = -0.2;
+    plane.position.z = 0;
+
+    // add the plane to the scene
+    scene.add(plane);
+
+    // position and point the camera to the center of the scene
+    camera.position.x = 15;
+    camera.position.y = 8;
+    camera.position.z = 15;
+    camera.lookAt(scene.position);
+
+    // add spotlight for the shadows
+    var spotLight = new THREE.SpotLight(0xffffff);
+    spotLight.position.set(10, 20, 20);
+    spotLight.shadowCameraNear = 20;
+    spotLight.shadowCameraFar = 50;
+    spotLight.castShadow = true;
+
+    scene.add(spotLight);
+
+    setupParticleSystem(25,25);
+
+    // setup the control object for the control gui
+    control = new function() {
+        this.rotationSpeed = 0.005;
+        this.opacity = 0.6;
+//            this.color = cubeMaterial.color.getHex();
+    };
+
+    // add extras
+    addControlGui(control);
+    addStatsObject();
+
+
+    // add the output of the renderer to the html element
+    document.body.appendChild(renderer.domElement);
+
+    console.log('Log statement from the init function');
+//        console.log(cube);
+
+
+    // call the render function, after the first render, interval is determined
+    // by requestAnimationFrame
+    render();
+
+    setupSound();
+    loadSound("../assets/audio/imperial_march.ogg");
+
+}
+
+
+function setupParticleSystem(widht, depth) {
+
+    var targetGeometry = new THREE.Geometry();
+
+
+    for (var i = 0 ; i < widht ; i ++) {
+        for (var j = 0 ; j < depth ; j ++) {
+            var v = new THREE.Vector3(i/2-(widht/2)/2, 0, j/2-(depth/2)/2);
+            targetGeometry.vertices.push(v);
+            targetGeometry.colors.push(new THREE.Color(Math.random() * 0xffffff));
+        }
+    }
+
+    var ps = new THREE.ParticleSystem(targetGeometry,pm);
+    ps.name = 'ps';
+    scene.add(ps);
+}
+
+//function setupCubes(widht, depth) {
+//
+//    var targetGeometry = new THREE.Geometry();
+//
+//
+//    for (var i = 0 ; i < widht ; i ++) {
+//        for (var j = 0 ; j < depth ; j ++) {
+//            var cubeGeometry = new THREE.CubeGeometry(1, 3, 1, 8, 8, 8);
+//
+//            cubeGeometry.applyMatrix(new THREE.Matrix4().makeTranslation( 2*i,  0 , 2*j ) );
+//
+//            THREE.GeometryUtils.merge(targetGeometry,cubeGeometry);
+//        }
+//    }
+//
+//
+//
+//    var ps = new THREE.ParticleSystem(targetGeometry, pm);
+//    ps.sortParticles = true;
+//
+//
+//    scene.add(ps);
+//    systems.push(ps);
+//}
+
+
+function addControlGui(controlObject) {
+    var gui = new dat.GUI();
+    gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
+    gui.add(controlObject, 'opacity', 0.1, 1);
+//        gui.addColor(controlObject, 'color');
+}
+
+function addStatsObject() {
+    stats = new Stats();
+    stats.setMode(0);
+
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+
+    document.body.appendChild( stats.domElement );
+}
+
+
+/**
+ * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+ * for future renders
+ */
+function render() {
+    // update the camera
+    var rotSpeed = control.rotationSpeed;
+    camera.position.x = camera.position.x * Math.cos(rotSpeed) + camera.position.z * Math.sin(rotSpeed);
+    camera.position.z = camera.position.z * Math.cos(rotSpeed) - camera.position.x * Math.sin(rotSpeed);
+    camera.lookAt(scene.position);
+
+    // change opacity
+//    scene.getObjectByName('cube').material.opacity = control.opacity;
+
+    // change color
+//    scene.getObjectByName('cube').material.color = new THREE.Color(control.color);
+
+    // update stats
+    stats.update();
+
+    // and render the scene
+    renderer.render(scene, camera);
+
+    // render using requestAnimationFrame
+    requestAnimationFrame(render);
+}
+
+var context;
+var sourceNode;
+var analyser;
+var analyser2;
+var javascriptNode;
+
+function setupSound() {
+    if (! window.AudioContext) {
+        if (! window.webkitAudioContext) {
+            alert('no audiocontext found');
+        }
+        window.AudioContext = window.webkitAudioContext;
+    }
+    context = new AudioContext();
+
+    // setup a javascript node
+    javascriptNode = context.createScriptProcessor(4096, 1, 1);
+    // connect to destination, else it isn't called
+    javascriptNode.connect(context.destination);
+    javascriptNode.onaudioprocess = function() {
+
+        // get the average for the first channel
+        var array =  new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(array);
+
+        var ps = scene.getObjectByName('ps');
+        var geom = ps.geometry;
+
+        for (var i = 0 ; i < array.length ; i++) {
+            if (geom.vertices[i]) {
+                geom.vertices[i].y=array[i]/40;
+                geom.colors[i] = new THREE.Color(scale(array[i]).hex());
+            }
+
+        }
+
+
+
+        ps.sortParticles=true;
+        geom.verticesNeedUpdate = true;
+    }
+
+    // setup a analyzer
+    analyser = context.createAnalyser();
+    analyser.smoothingTimeConstant = 0.8;
+    analyser.fftSize = 2048;
+
+    // create a buffer source node
+    sourceNode = context.createBufferSource();
+    var splitter = context.createChannelSplitter();
+
+    // connect the source to the analyser and the splitter
+    sourceNode.connect(splitter);
+
+    // connect one of the outputs from the splitter to
+    // the analyser
+    splitter.connect(analyser,0,0);
+
+    // connect the splitter to the javascriptnode
+    // we use the javascript node to draw at a
+    // specific interval.
+    analyser.connect(javascriptNode);
+
+    // and connect to destination
+    sourceNode.connect(context.destination);
+
+    context = new AudioContext();
+}
+
+
+function getAverageVolume(array) {
+    var values = 0;
+    var average;
+
+    var length = array.length;
+
+    // get all the frequency amplitudes
+    for (var i = 0; i < length; i++) {
+        values += array[i];
+    }
+
+    average = values / length;
+    return average;
+}
+
+function playSound(buffer) {
+    sourceNode.buffer = buffer;
+    sourceNode.start(0);
+}
+
+// load the specified sound
+function loadSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+
+    // When loaded decode the data
+    request.onload = function() {
+
+        // decode the data
+        context.decodeAudioData(request.response, function(buffer) {
+            // when the audio is decoded play the sound
+            playSound(buffer);
+        }, onError);
+    }
+    request.send();
+}
+
+function onError(e) {
+    console.log(e);
+}
+
+
+/**
+ * Function handles the resize event. This make sure the camera and the renderer
+ * are updated at the correct moment.
+ */
+function handleResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// calls the init function when the window is done loading.
+window.onload = init;
+// calls the handleResize function when the window is resized
+window.addEventListener('resize', handleResize, false);
+
+</script>
+<body>
+</body>
+</html>
