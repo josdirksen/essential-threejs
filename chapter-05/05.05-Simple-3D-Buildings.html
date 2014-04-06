@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>05.05- 3D plane from scratch</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/chroma.min.js"></script>
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            /*overflow: hidden;*/
+        }
+
+        #myId {
+            background-color: grey;
+        }
+    </style>
+</head>
+<script>
+
+//------------------------------------------------------
+// Some globally shared variables
+//------------------------------------------------------
+
+// global variables
+var renderer;
+var scene;
+var camera;
+var control;
+var stats;
+
+var scale = chroma.scale(['black','#111111','#222222','white','yellow']).domain([0,1],10);
+
+
+//------------------------------------------------------
+// Set up the main scene
+//------------------------------------------------------
+
+/**
+ * Initializes the scene, camera and objects. Called when the window is
+ * loaded by using window.onload (see below)
+ */
+function init() {
+
+    // create a scene, that will hold all our elements such as objects, cameras and lights.
+    scene = new THREE.Scene();
+
+    // create a camera, which defines where we're looking at.
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // create a render, sets the background color and the size
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(0x000000, 1.0);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMapEnabled = true;
+
+    // position and point the camera to the center of the scene
+    camera.position.x = 7;
+    camera.position.y = 12;
+    camera.position.z = 10;
+    camera.lookAt(new THREE.Vector3(-10,0,-10));
+
+    // add spotlight for the shadows
+    var dirLight = new THREE.DirectionalLight(0xffffff);
+    dirLight.position.set(25, 25, 10);
+
+    scene.add(dirLight);
+
+//    scene.add(new THREE.AmbientLight(0x252525));
+
+    // setup the control object for the control gui
+    control = new function() {
+
+    };
+
+    // add the control gui and the stats UI
+    addControlGui(control);
+    addStatsObject();
+
+    // add the output of the renderer to the html element
+    document.body.appendChild(renderer.domElement);
+
+    // set up the example specific stuff
+    createCity(40, 20, 20, 1);
+
+    // call the render function, after the first render, interval is determined
+    // by requestAnimationFrame
+    render();
+}
+
+//------------------------------------------------------
+// Functions specific to this example
+//------------------------------------------------------
+
+function createCity(buildingCount, rangeX, rangeY, scale) {
+
+    // create the basic buildingblock
+    var buildingBlock = new THREE.CubeGeometry(1,1,1);
+    buildingBlock.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0.5, 0 ) );
+
+    // setup the texture for the roof
+    var uvPixel = 0.0;
+    buildingBlock.faceVertexUvs[0][4][0]=new THREE.Vector2(uvPixel,uvPixel);
+    buildingBlock.faceVertexUvs[0][4][1]=new THREE.Vector2(uvPixel,uvPixel);
+    buildingBlock.faceVertexUvs[0][4][2]=new THREE.Vector2(uvPixel,uvPixel);
+    buildingBlock.faceVertexUvs[0][5][0]=new THREE.Vector2(uvPixel,uvPixel);
+    buildingBlock.faceVertexUvs[0][5][1]=new THREE.Vector2(uvPixel,uvPixel);
+    buildingBlock.faceVertexUvs[0][5][2]=new THREE.Vector2(uvPixel,uvPixel);
+
+
+    // create buildings
+    for (var i = 0 ; i < buildingCount ; i++) {
+
+        // create a custom material for each building
+        var material = new THREE.MeshLambertMaterial();
+        material.color = new THREE.Color(0xffffff);
+        material.map = new THREE.Texture(generateBuildingTexture());
+        material.map.anisotropy = renderer.getMaxAnisotropy();
+        material.map.needsUpdate    = true;
+
+        // create the mesh
+        var building = new THREE.Mesh(buildingBlock, material);
+        var scale =((Math.random()/1.2)+0.5) * scale;
+
+        // scale the buildings
+        building.scale.x = scale;
+        building.scale.z = scale;
+        building.scale.y = scale * 4;
+
+        // position the buildings
+        building.position.x=(Math.random()/2 * rangeX)-rangeX/2;
+        building.position.z=(Math.random()/2 * rangeY)-rangeY/2;
+
+        // add to scene
+        scene.add(building);
+    }
+}
+
+function generateBuildingTexture() {
+
+    var canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 512;
+
+    var ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled   = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled  = false;
+
+    ctx.fillStyle='#111111';
+    ctx.fillRect(0,0,512,512);
+
+
+    // fill in the windows
+    for (var x = 0 ; x < 256 ; x+=8) {
+        for (var y = 0 ; y < 490 ; y+=8) {
+
+            ctx.fillStyle=scale(Math.random()).hex();
+            ctx.fillRect(x+1,y+1,6,6);
+        }
+    }
+    for (var x = 0 ; x < 256 ; x+=8) {
+        for (var y = 490 ; y < 512 ; y+=8) {
+            ctx.fillStyle='#333333';
+            ctx.fillRect(x+1,y+1,8,8);
+        }
+    }
+
+    return canvas;
+}
+
+//------------------------------------------------------
+// Main render loop
+//------------------------------------------------------
+
+
+/**
+ * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+ * for future renders
+ */
+function render() {
+    // update the camera
+//        var rotSpeed = control.rotationSpeed;
+//        camera.position.x = camera.position.x * Math.cos(rotSpeed) + camera.position.z * Math.sin(rotSpeed);
+//        camera.position.z = camera.position.z * Math.cos(rotSpeed) - camera.position.x * Math.sin(rotSpeed);
+//        camera.lookAt(scene.position);
+
+    // update stats
+    stats.update();
+
+    // and render the scene
+    renderer.render(scene, camera);
+
+    // render using requestAnimationFrame
+    requestAnimationFrame(render);
+}
+
+
+//------------------------------------------------------
+// Some generic helper functions
+//------------------------------------------------------
+
+/**
+ * Create the control object, based on the supplied configuration
+ *
+ * @param controlObject the configuration for this control
+ */
+function addControlGui(controlObject) {
+    var gui = new dat.GUI();
+}
+
+/**
+ * Add the stats object to the top left border
+ */
+function addStatsObject() {
+    stats = new Stats();
+    stats.setMode(0);
+
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+
+    document.body.appendChild( stats.domElement );
+}
+
+
+/**
+ * Function handles the resize event. This make sure the camera and the renderer
+ * are updated at the correct moment.
+ */
+function handleResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+//------------------------------------------------------
+// Init the scene and register the resize handler
+//------------------------------------------------------
+
+// calls the init function when the window is done loading.
+window.onload = init;
+// calls the handleResize function when the window is resized
+window.addEventListener('resize', handleResize, false);
+
+</script>
+<body>
+
+</body>
+</html>

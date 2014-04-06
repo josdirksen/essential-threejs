@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>05.07 - Advanced tree</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/chroma.min.js"></script>
+    <!--https://github.com/josephg/noisejs-->
+    <script src="../libs/perlin.js"></script>
+    <script src="../libs/proctree.js"></script>
+
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<script>
+
+//------------------------------------------------------
+// Some globally shared variables
+//------------------------------------------------------
+
+// global variables
+var MAX_HEIGHT = 10;
+var renderer;
+var scene;
+var camera;
+var control;
+var stats;
+//var scale = chroma.scale(['0x0000cc','0x0000ff','red']).domain([0,MAX_HEIGHT]);
+
+//------------------------------------------------------
+// Set up the main scene
+//------------------------------------------------------
+
+/**
+ * Initializes the scene, camera and objects. Called when the window is
+ * loaded by using window.onload (see below)
+ */
+function init() {
+
+    // create a scene, that will hold all our elements such as objects, cameras and lights.
+    scene = new THREE.Scene();
+
+    // create a camera, which defines where we're looking at.
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // create a render, sets the background color and the size
+    renderer = new THREE.WebGLRenderer();
+    renderer.setClearColor(0x000000, 1.0);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMapEnabled = true;
+
+    // position and point the camera to the center of the scene
+    camera.position.x = 5;
+    camera.position.y = 10;
+    camera.position.z = 7;
+    camera.lookAt(new THREE.Vector3(1,5,0));
+
+    // add spotlight for the shadows
+    var spotLight = new THREE.SpotLight(0xffffff);
+    spotLight.position.set(10, 150, 10);
+    spotLight.shadowCameraNear = 20;
+    spotLight.shadowCameraFar = 50;
+    spotLight.castShadow = true;
+
+    scene.add(spotLight);
+
+    scene.add(new THREE.AmbientLight(0x252525));
+
+    // setup the control object for the control gui
+    control = new function() {
+        this.seed = 262;
+        this.segments = 6;
+        this.levels = 5;
+        this.vMultiplier = 2.36;
+        this.twigScale = 0.1;
+        this.initalBranchLength = 0.49;
+        this.lengthFalloffFactor = 0.85;
+        this.lengthFalloffPower = 0.99;
+        this.clumpMax = 0.454;
+        this.clumpMin = 0.404;
+        this.branchFactor = 2.45;
+        this.dropAmount = -0.1;
+        this.growAmount = 0.235;
+        this.sweepAmount = 0.01;
+        this.maxRadius = 0.139;
+        this.climbRate = 0.371;
+        this.trunkKink = 0.093;
+        this.treeSteps = 10;
+        this.taperRate = 0.947;
+        this.radiusFalloffRate = 0.73;
+        this.twistRate = 3.02;
+        this.trunkLength = 2.4;
+
+        this.update = function() {
+            createTree(control);
+        };
+    };
+
+    // add the control gui and the stats UI
+    addControlGui(control);
+    addStatsObject();
+
+    // add the output of the renderer to the html element
+    document.body.appendChild(renderer.domElement);
+
+    // set up the example specific stuff
+    createTree(control);
+
+    // call the render function, after the first render, interval is determined
+    // by requestAnimationFrame
+    render();
+}
+
+//------------------------------------------------------
+// Functions specific to this example
+//------------------------------------------------------
+
+function createTree(config) {
+
+    var twig = scene.getObjectByName('twig');
+    var trunk = scene.getObjectByName('trunk');
+
+    if (twig) scene.remove(twig);
+    if (trunk) scene.remove(trunk);
+
+
+    var myTree = new Tree({
+        "seed": config.seed,
+        "segments": config.segments,
+        "levels": config.levels,
+        "vMultiplier": config.vMultiplier,
+        "twigScale": config.twigScale,
+        "initalBranchLength": config.initalBranchLength,
+        "lengthFalloffFactor": config.lengthFalloffFactor,
+        "lengthFalloffPower": config.lengthFalloffPower,
+        "clumpMax": config.clumpMax,
+        "clumpMin": config.clumpMin,
+        "branchFactor": config.branchFactor,
+        "dropAmount": config.dropAmount,
+        "growAmount": config.growAmount,
+        "sweepAmount": config.sweepAmount,
+        "maxRadius": config.maxRadius,
+        "climbRate": config.climbRate,
+        "trunkKink": config.trunkKink,
+        "treeSteps": config.treeSteps,
+        "taperRate": config.taperRate,
+        "radiusFalloffRate": config.radiusFalloffRate,
+        "twistRate": config.twistRate,
+        "trunkLength": config.trunkLength
+    });
+
+    var trunkGeom = new THREE.Geometry();
+    var leaveGeom = new THREE.Geometry();
+
+    // convert the vertices
+    myTree.verts.forEach(function(v) {
+        trunkGeom.vertices.push(new THREE.Vector3(v[0],v[1],v[2]));
+    });
+
+    myTree.vertsTwig.forEach(function(v) {
+        leaveGeom.vertices.push(new THREE.Vector3(v[0],v[1],v[2]));
+    });
+
+    // convert the faces
+    myTree.faces.forEach(function(f) {
+        trunkGeom.faces.push(new THREE.Face3(f[0],f[1],f[2]));
+    });
+
+
+    myTree.facesTwig.forEach(function(f) {
+        leaveGeom.faces.push(new THREE.Face3(f[0],f[1],f[2]));
+    });
+
+//    // setup uvsTwig
+    myTree.facesTwig.forEach(function(f) {
+        var uva = myTree.uvsTwig[f[0]];
+        var uvb = myTree.uvsTwig[f[1]];
+        var uvc = myTree.uvsTwig[f[2]];
+
+        var vuva = new THREE.Vector2(uva[0],uva[1]);
+        var vuvb = new THREE.Vector2(uvb[0],uvb[1]);
+        var vuvc = new THREE.Vector2(uvc[0],uvc[1]);
+
+        leaveGeom.faceVertexUvs[0].push([vuva, vuvb, vuvc]);
+    });
+
+
+    // setup uvsTwig
+    myTree.faces.forEach(function(f) {
+        var uva = myTree.UV[f[0]];
+        var uvb = myTree.UV[f[1]];
+        var uvc = myTree.UV[f[2]];
+
+        var vuva = new THREE.Vector2(uva[0],uva[1]);
+        var vuvb = new THREE.Vector2(uvb[0],uvb[1]);
+        var vuvc = new THREE.Vector2(uvc[0],uvc[1]);
+
+        trunkGeom.faceVertexUvs[0].push([vuva, vuvb, vuvc]);
+    });
+
+    var leaveMat = new THREE.MeshLambertMaterial();
+    leaveMat.map = THREE.ImageUtils.loadTexture("../assets/textures/leaf2.png");
+    leaveMat.doubleSided = true;
+    leaveMat.transparent = true;
+
+
+    var trunkMat = new THREE.MeshLambertMaterial();
+    trunkMat.map = THREE.ImageUtils.loadTexture("../assets/textures/birch.jpg");
+    trunkMat.doubleSided = true;
+    trunkMat.transparent = true;
+
+    trunkGeom.computeFaceNormals();
+    leaveGeom.computeFaceNormals();
+    trunkGeom.computeVertexNormals(true);
+    leaveGeom.computeVertexNormals(true);
+
+    var trunkMesh = new THREE.Mesh(trunkGeom, trunkMat);
+    trunkMesh.name = 'trunk';
+
+    var twigMesh = new THREE.Mesh(leaveGeom, leaveMat);
+    twigMesh.name = 'twig';
+
+    scene.add(trunkMesh);
+    scene.add(twigMesh);
+
+
+}
+
+function getHighPoint(geometry, face) {
+
+    var v1 = geometry.vertices[face.a].y;
+    var v2 = geometry.vertices[face.b].y;
+    var v3 = geometry.vertices[face.c].y;
+
+    return Math.max(v1, v2, v3);
+}
+
+//------------------------------------------------------
+// Main render loop
+//------------------------------------------------------
+
+
+/**
+ * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+ * for future renders
+ */
+function render() {
+    // update the camera
+//        var rotSpeed = control.rotationSpeed;
+//        camera.position.x = camera.position.x * Math.cos(rotSpeed) + camera.position.z * Math.sin(rotSpeed);
+//        camera.position.z = camera.position.z * Math.cos(rotSpeed) - camera.position.x * Math.sin(rotSpeed);
+//        camera.lookAt(scene.position);
+
+    // update stats
+    stats.update();
+
+    // and render the scene
+    renderer.render(scene, camera);
+
+    // render using requestAnimationFrame
+    requestAnimationFrame(render);
+}
+
+
+//------------------------------------------------------
+// Some generic helper functions
+//------------------------------------------------------
+
+/**
+ * Create the control object, based on the supplied configuration
+ *
+ * @param controlObject the configuration for this control
+ */
+function addControlGui(controlObject) {
+    var gui = new dat.GUI();
+    gui.add(controlObject,"seed");
+    gui.add(controlObject,"segments");
+    gui.add(controlObject,"levels");
+    gui.add(controlObject,"vMultiplier");
+    gui.add(controlObject,"twigScale");
+    gui.add(controlObject,"initalBranchLength");
+    gui.add(controlObject,"lengthFalloffFactor");
+    gui.add(controlObject,"lengthFalloffPower");
+    gui.add(controlObject,"clumpMax");
+    gui.add(controlObject,"clumpMin");
+    gui.add(controlObject,"branchFactor");
+    gui.add(controlObject,"dropAmount");
+    gui.add(controlObject,"growAmount");
+    gui.add(controlObject,"sweepAmount");
+    gui.add(controlObject,"maxRadius");
+    gui.add(controlObject,"climbRate");
+    gui.add(controlObject,"trunkKink");
+    gui.add(controlObject,"trunkKink");
+    gui.add(controlObject,"treeSteps");
+    gui.add(controlObject,"taperRate");
+    gui.add(controlObject,"radiusFalloffRate");
+    gui.add(controlObject,"twistRate");
+    gui.add(controlObject,"radiusFalloffRate");
+    gui.add(controlObject,"trunkLength");
+
+    gui.add(controlObject,"update");
+}
+
+/**
+ * Add the stats object to the top left border
+ */
+function addStatsObject() {
+    stats = new Stats();
+    stats.setMode(0);
+
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+
+    document.body.appendChild( stats.domElement );
+}
+
+
+/**
+ * Function handles the resize event. This make sure the camera and the renderer
+ * are updated at the correct moment.
+ */
+function handleResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+//------------------------------------------------------
+// Init the scene and register the resize handler
+//------------------------------------------------------
+
+// calls the init function when the window is done loading.
+window.onload = init;
+// calls the handleResize function when the window is resized
+window.addEventListener('resize', handleResize, false);
+
+</script>
+<body>
+</body>
+</html>
