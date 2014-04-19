@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>06.02 - Google Cube</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/CSS3DRenderer.js"></script>
+    <script src="../libs/OrbitControls.js"></script>
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+        #someidentifier {
+            position: fixed;
+            z-index: 100;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: black;
+            opacity: 0.7;
+            color: #ffffff;
+            font-family: Calibri;
+        }
+        #query {
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<script>
+
+    var iframe= '<iframe width="600" height="450" frameborder="0"' +
+            ' style="border:0" src="https://www.google.com/maps/embed/' +
+            'v1/view?zoom=10&maptype=satellite&center=LOCATION' +
+            '&key=AIzaSyAVUZTKZz1e6hbEwZOT8CmWfoMhegHL7bs"></iframe>';
+    var loc = "52.3702%2C4.8952";
+
+    // global variables
+    var renderer;
+    var scene;
+    var camera;
+    var control;
+    var controls;
+    var stats;
+
+    // the geometry we'll use
+    var cube = new THREE.SphereGeometry(700,6,4);
+
+    var sides = [];
+    var divCount = 0;
+
+
+    /**
+     * Initializes the scene, camera and objects. Called when the window is
+     * loaded by using window.onload (see below)
+     */
+    function init() {
+
+        // create a scene, that will hold all our elements such as objects, cameras and lights.
+        scene = new THREE.Scene();
+
+        // create a camera, which defines where we're looking at.
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        // create a render, sets the background color and the size
+
+
+        renderer = new THREE.CSS3DRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.domElement.style.position = 'absolute';
+        renderer.domElement.style.top = 0;
+
+        // position and point the camera to the center of the scene
+        camera.position.x = 1000;
+        camera.position.y = 1000;
+        camera.position.z = 1000;
+        camera.lookAt(scene.position);
+
+        controls = new THREE.OrbitControls(camera,renderer.domElement);
+
+
+        // setup the control object for the control gui
+        control = new function() {
+        };
+
+        // add extras
+
+        addStatsObject();
+
+
+        // add the output of the renderer to the html element
+        document.body.appendChild(renderer.domElement);
+
+        console.log('Log statement from the init function');
+
+//        scene.add(createCSS3DObject());
+        createSides(iframe.replace("LOCATION",loc), cube);
+
+
+
+
+        // call the render function, after the first render, interval is determined
+        // by requestAnimationFrame
+        render();
+    }
+
+    function createCSS3DObject(s) {
+        var div = document.createElement('div');
+        div.innerHTML = s;
+        var element = div.firstChild;
+        element.style.width = '370px';
+        element.style.height = '370px';
+
+        div.style.width = '370px';
+        div.style.height = '370px';
+        div.style.opacity = 0.7;
+        div.style.background = new THREE.Color( Math.random() * 0xffffff ).getStyle();
+
+        var object = new THREE.CSS3DObject( div );
+        object.name='test';
+
+        return object;
+    }
+
+    function createSides(s, geometry) {
+
+        // merge these, or compensate the offset
+        for (var iFace = 0 ; iFace < geometry.faces.length; iFace+=2) {
+
+            // create a new object
+            var side = createCSS3DObject(s);
+
+
+
+
+
+            // get this face and the next which both make the cube
+            var face = geometry.faces[iFace];
+            var faceNext = geometry.faces[iFace+1];
+
+            // First reposition the div elements based on the two faces
+            // that make up the side of the cube
+            side.position.x = (face.centroid.x + faceNext.centroid.x)/2;
+            side.position.y = (face.centroid.y + faceNext.centroid.y)/2;
+            side.position.z = (face.centroid.z + faceNext.centroid.z)/2;
+
+            // Now we need to rotate the div to the correct position
+            var up = new THREE.Vector3(0,0,1);
+            var normal = geometry.faces[iFace].normal;;
+
+            // We calculate the axis on which to rotate by
+            // selecting the cross of the vectors
+            var axis = new THREE.Vector3();
+            axis.crossVectors(up,normal);
+
+            // based on the axis, in relation to our normal vector
+            // we can calculate the angle.
+            var angle = Math.atan2(axis.length(), up.dot(normal));
+            axis.normalize();
+
+            // now we can use matrix function to rotate the object so
+            // it is aligned with the normal from the face
+            var matrix4 = new THREE.Matrix4();
+            matrix4.makeRotationAxis(axis,angle);
+
+            side.rotation.setFromRotationMatrix(matrix4);
+            scene.add(side);
+            sides.push(side);
+        }
+    }
+
+    function updateDivElement(pos, s) {
+        var css3dObject = sides[pos];
+        var element = css3dObject.element;
+
+        while (element.hasChildNodes())
+            element.removeChild(element.lastChild);
+
+        var toAdd = createCSS3DObject(s).element.firstChild;
+//        console.log(toAdd);
+
+        element.appendChild(toAdd);
+    }
+
+    function getCenter(object, face) {
+
+        console.log(face);
+        var a = object.vertices[face.a];
+        var b = object.vertices[face.b];
+        var c = object.vertices[face.c];
+
+        var added = new THREE.Vector3();
+        added.add(a);
+        added.add(b);
+        added.add(c);
+
+        console.log(added);
+
+
+
+        return added;
+    }
+
+
+    function addControlGui(controlObject) {
+        var gui = new dat.GUI();
+    }
+
+    function addStatsObject() {
+        stats = new Stats();
+        stats.setMode(0);
+
+        stats.domElement.style.position = 'absolute';
+        stats.domElement.style.left = '0px';
+        stats.domElement.style.top = '0px';
+
+        document.body.appendChild( stats.domElement );
+    }
+
+
+    /**
+     * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+     * for future renders
+     */
+    function render() {
+
+        controls.update();
+
+        // update stats
+        stats.update();
+
+        // and render the scene
+        renderer.render(scene, camera);
+
+        // render using requestAnimationFrame
+        requestAnimationFrame(render);
+    }
+
+
+    /**
+     * Function handles the resize event. This make sure the camera and the renderer
+     * are updated at the correct moment.
+     */
+    function handleResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    var count = 0;
+    function handleSubmit(e) {
+        if (e.keyCode == 13) {
+            var value = document.getElementById("queryField").value;
+            var value = document.getElementById("queryField").value.replace(",","%2c");
+            updateDivElement(count++%6,iframe.replace("LOCATION",value));
+        }
+    }
+
+    // calls the init function when the window is done loading.
+    window.onload = init;
+    // calls the handleResize function when the window is resized
+    window.addEventListener('resize', handleResize, false);
+
+</script>
+<body>
+<div id="someidentifier">
+    <div id="query">Enter coordinates:
+        <input id="queryField" type="text"/></div>
+</div>
+</body>
+<script>
+    document.getElementById("queryField").addEventListener("keydown",handleSubmit);
+    document.getElementById("queryField").value="52.3702,4.8952";
+</script>
+</html>

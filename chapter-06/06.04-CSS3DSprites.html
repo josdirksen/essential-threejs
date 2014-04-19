@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>06.04 - Parametric CSS Sprites</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/chroma.min.js"></script>
+    <script src="../libs/perlin.js"></script>
+    <script src="../libs/CSS3DRenderer.js"></script>
+    <script src="../libs/OrbitControls.js"></script>
+    <script src="../libs/Tween.js"></script>
+
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+
+    </style>
+</head>
+<script>
+
+//------------------------------------------------------
+// Some globally shared variables
+//------------------------------------------------------
+
+// global variables
+var MAX_HEIGHT = 12;
+var renderer;
+var scene;
+var camera;
+var control;
+var stats;
+var scale = chroma.scale(['blue', 'green', 'red']).domain([0, MAX_HEIGHT]);
+var controls;
+
+//------------------------------------------------------
+// Set up the main scene
+//------------------------------------------------------
+
+/**
+ * Initializes the scene, camera and objects. Called when the window is
+ * loaded by using window.onload (see below)
+ */
+function init() {
+
+    // create a scene, that will hold all our elements such as objects, cameras and lights.
+    scene = new THREE.Scene();
+
+
+    // create a render, sets the background color and the size
+    renderer = new THREE.CSS3DRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = 0;
+
+    // create a camera, which defines where we're looking at.
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+
+    // position and point the camera to the center of the scene
+    camera.position.x = 500;
+    camera.position.y = 400;
+    camera.position.z = 500;
+    camera.lookAt(scene.position);
+
+
+    // setup the control object for the control gui
+    control = new function () {
+    };
+
+    // add the control gui and the stats UI
+    addControlGui(control);
+    addStatsObject();
+
+    // add the output of the renderer to the html element
+    document.body.appendChild(renderer.domElement);
+
+    // set up the example specific stuff
+    var currentGeometry = create3DTerrain(21, 21, 21, 21, 50);
+    var targetGeometry = create3DTerrain(21, 21, 21, 21, 50);
+    var container = new THREE.Object3D();
+
+
+    // for each vertices add a sprite
+    currentGeometry.vertices.forEach(function (e) {
+//        var cssObject = new THREE.CSS3DObject(createDiv());
+        var cssObject = new THREE.CSS3DSprite(createDiv());
+        cssObject.position = new THREE.Vector3(e.x, e.y, e.z);
+        container.add(cssObject);
+    });
+
+    // create new geometry, based on a new seed
+
+    var tweenIn = new TWEEN.Tween({pos: 0})
+            .to({pos: 1}, 1000)
+            .easing(TWEEN.Easing.Sinusoidal.InOut)
+            .onUpdate(function () {
+                var target = this.pos;
+                var i = 0;
+                container.children.forEach(function (e) {
+                    e.position.y = currentGeometry.vertices[i].y - (currentGeometry.vertices[i].y - targetGeometry.vertices[i].y) * target;
+                    i++;
+                });
+            }).onComplete(function () {
+                currentGeometry = targetGeometry.clone();
+                targetGeometry = create3DTerrain(21, 21, 21, 21, 50);
+
+                this.pos = 0;
+            });
+
+    tweenIn.chain(tweenIn);
+    tweenIn.start();
+
+
+    container.position.y = 50;
+    container.position.z = -150;
+    container.position.x = -150;
+    scene.add(container);
+
+    // call the render function, after the first render, interval is determined
+    // by requestAnimationFrame
+    render();
+}
+
+//------------------------------------------------------
+// Functions specific to this example
+//------------------------------------------------------
+
+function createDiv() {
+
+    var img = document.createElement('img');
+    img.src = "../assets/textures/particles/flame.png";
+    img.height = 29;
+    img.style.opacity = 0.6;
+
+    return img;
+}
+
+function create3DTerrain(width, depth, spacingX, spacingZ, height) {
+
+    var date = new Date();
+    noise.seed(Math.random() * date.getMilliseconds());
+
+
+    // first create all the individual vertices
+    var geometry = new THREE.Geometry();
+    for (var z = 0; z < depth; z++) {
+        for (var x = 0; x < width; x++) {
+            var yValue = Math.abs(noise.perlin2(x / 8, z / 8) * height * 2);
+            var vertex = new THREE.Vector3(x * spacingX, yValue, z * spacingZ);
+            geometry.vertices.push(vertex);
+        }
+    }
+
+    return geometry;
+}
+
+//------------------------------------------------------
+// Main render loop
+//------------------------------------------------------
+
+
+/**
+ * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+ * for future renders
+ */
+function render() {
+    // update controls
+    controls.update();
+
+    // update stats
+    stats.update();
+
+    // and render the scene
+    renderer.render(scene, camera);
+
+    // render using requestAnimationFrame
+    requestAnimationFrame(render);
+
+    // update tween
+    TWEEN.update();
+
+}
+
+
+//------------------------------------------------------
+// Some generic helper functions
+//------------------------------------------------------
+
+/**
+ * Create the control object, based on the supplied configuration
+ *
+ * @param controlObject the configuration for this control
+ */
+function addControlGui(controlObject) {
+    var gui = new dat.GUI();
+}
+
+/**
+ * Add the stats object to the top left border
+ */
+function addStatsObject() {
+    stats = new Stats();
+    stats.setMode(0);
+
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+
+    document.body.appendChild(stats.domElement);
+}
+
+
+/**
+ * Function handles the resize event. This make sure the camera and the renderer
+ * are updated at the correct moment.
+ */
+function handleResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+//------------------------------------------------------
+// Init the scene and register the resize handler
+//------------------------------------------------------
+
+// calls the init function when the window is done loading.
+window.onload = init;
+// calls the handleResize function when the window is resized
+window.addEventListener('resize', handleResize, false);
+
+</script>
+<body>
+</body>
+</html>

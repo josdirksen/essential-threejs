@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>06.01 - CSS3DSkeletons</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/CSS3DRenderer.js"></script>
+    <script src="../libs/OrbitControls.js"></script>
+    <script src="../libs/tween.js"></script>
+
+    <style>
+        body {
+            /* set margin to 0 and overflow to hidden, to go fullscreen */
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        #someidentifier {
+            position: fixed;
+            z-index: 100;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: black;
+            opacity: 0.7;
+            color: #ffffff;
+            font-family: Calibri;
+        }
+
+        #query {
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<script>
+
+// global variables
+var renderer;
+var scene;
+var camera;
+var control;
+var controls;
+var stats;
+
+var offset = 40;
+var offscreen = new THREE.Vector3(1000, 0, 1000);
+var currentElements = [];
+var newlyAddedElements = [];
+var toBeRemovedElements = [];
+var positionAndRotation = [];
+
+/**
+ * Initializes the scene, camera and objects. Called when the window is
+ * loaded by using window.onload (see below)
+ */
+function init() {
+
+    // create a scene, that will hold all our elements such as objects, cameras and lights.
+    scene = new THREE.Scene();
+
+    // create a camera, which defines where we're looking at.
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // create a render, sets the background color and the size
+
+
+    renderer = new THREE.CSS3DRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = 0;
+
+    // position and point the camera to the center of the scene
+    camera.position.x = 1200;
+    camera.position.y = 1200;
+    camera.position.z = 1200;
+    camera.lookAt(scene.position);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.autoRotate = true;
+
+
+    // setup the control object for the control gui
+    control = new function () {
+        this.toCube = function (e) {
+            updateStructure(new THREE.CubeGeometry(20, 14, 20, 5, 3, 5), 40);
+        };
+        this.toCylinder = function () {
+            updateStructure(new THREE.CylinderGeometry(12, 12, 27, 15, 7, true), 40);
+        };
+        this.toSphere = function () {
+            updateStructure(new THREE.SphereGeometry(17, 10, 10), 40);
+        };
+        this.toPlane = function () {
+//            updateStructure(new THREE.PlaneGeometry(30, 30, 8, 8), 40);
+            updateStructure(new THREE.TorusGeometry(20,10,8,10),25);
+
+        };
+    };
+
+    // add extras
+
+    addStatsObject();
+
+
+    // add the output of the renderer to the html element
+    document.body.appendChild(renderer.domElement);
+
+    addControlGui(control);
+
+
+    updateStructure(new THREE.PlaneGeometry(30, 30, 8, 8), 40);
+    // call the render function, after the first render, interval is determined
+    // by requestAnimationFrame
+    render();
+}
+
+function createCSS3DObject(iFace) {
+    var div = document.createElement('div');
+    var img = document.createElement('img');
+
+    var nrString = ("000" + iFace * 4).substr(-3, 3);
+    img.src = '../assets/screens/WALL-E-' + nrString + ".jpg";
+    img.width = 140;
+
+
+    div.appendChild(img);
+    div.style.opacity = 0.8;
+
+    var object = new THREE.CSS3DObject(div);
+    object.name = 'test';
+
+    return object;
+}
+
+function updateStructure(geometry, offset) {
+    // get the position where we need to move elements to
+    positionAndRotation = getPositionAndRotation(geometry, offset);
+
+    // the tweein, will be used to make all the new elements
+    // slowly visible
+    var tweenIn = new TWEEN.Tween({opacity: 0})
+            .to({pos: 1.0}, 3000)
+            .easing(TWEEN.Easing.Sinusoidal.InOut)
+            .onUpdate(function () {
+                var toSet = this.pos;
+                newlyAddedElements.forEach(function (cssObject) {
+                    cssObject.element.style.opacity = toSet;
+                });
+
+                var i = 0;
+                currentElements.forEach(function (cssObject) {
+                    // get the elements start position and target position
+                    var currentPos = positionAndRotation[i].currentPos;
+                    var targetPos = positionAndRotation[i].pos;
+
+                    // also get the elements start rotation and end rotations
+                    var currentRotation = positionAndRotation[i].currentRotation;
+                    var targetRotation = new THREE.Euler();
+                    targetRotation.setFromRotationMatrix(positionAndRotation[i].rot);
+
+                    // use the tween to slowly move the elements around.
+                    if (currentPos) {
+                        cssObject.position.x = currentPos.x + (targetPos.x - currentPos.x) * toSet;
+                        cssObject.position.y = currentPos.y + (targetPos.y - currentPos.y) * toSet;
+                        cssObject.position.z = currentPos.z + (targetPos.z - currentPos.z) * toSet;
+
+                        cssObject.rotation.x = currentRotation.x + (targetRotation.x - currentRotation.x) * toSet;
+                        cssObject.rotation.y = currentRotation.y + (targetRotation.y - currentRotation.y) * toSet;
+                        cssObject.rotation.z = currentRotation.z + (targetRotation.z - currentRotation.z) * toSet;
+                    }
+                    i++;
+                });
+            });
+
+    tweenIn.start();
+
+    // some cleanup
+    newlyAddedElements = [];
+    toBeRemovedElements = [];
+
+    // walk through the positionAndRotation set and either move or create the elements
+    for (var i = 0; i < positionAndRotation.length; i++) {
+
+        if (currentElements.length > i) {
+            // we need to move one of the existing ones.
+            var element = currentElements[i];
+            positionAndRotation[i].currentPos = element.position.clone();
+            positionAndRotation[i].currentRotation = element.rotation.clone();
+        } else {
+            // create a new one, and set it's position of screen
+            var element = createCSS3DObject(i + 1);
+
+            element.position = offscreen.clone();
+
+            positionAndRotation[i].currentPos = element.position.clone();
+            positionAndRotation[i].currentRotation = element.rotation.clone();
+
+            // set initial opacity to 0.
+            element.element.style.opacity = 0;
+
+            // add to the array to keep track of.
+            currentElements.push(element);
+            newlyAddedElements.push(element);
+            scene.add(element);
+        }
+    }
+
+    // finally remove the elements that aren't needed anymore
+    for (var i = positionAndRotation.length; i < currentElements.length; i++) {
+        toBeRemovedElements.push(currentElements[i]);
+    }
+
+    // and remove them from the scene
+    for (var i = 0; i < toBeRemovedElements.length; i++) {
+        scene.remove(currentElements.pop());
+    }
+}
+
+/**
+ * The first thing we need when we want to map the divs to a new model, is the position and the rotation
+ * matrix that needs to be applied to move the object to its new position. To calculate this we analyze
+ * the provided geometry, and use the faces to calculate the rotation and the position.  This return an
+ * array with the following elements:
+ *
+ * {
+     *  pos: THREE.Vector3(),
+     *  rot: THREE.Matrix4()
+     * }
+ *
+ * @param geometry
+ */
+function getPositionAndRotation(geometry, offset) {
+    var result = [];
+
+    for (var iFace = 0; iFace < geometry.faces.length; iFace += 2) {
+        var newPosition = new THREE.Vector3(0, 0, 0);
+
+        // get this face and the next which both make the cube
+        var face = geometry.faces[iFace];
+        var faceNext = geometry.faces[iFace + 1];
+
+        // calculate the position of where the elements need to go to.
+        newPosition.x = (face.centroid.x + faceNext.centroid.x) / 2 * offset;
+        newPosition.y = (face.centroid.y + faceNext.centroid.y) / 2 * offset;
+        newPosition.z = (face.centroid.z + faceNext.centroid.z) / 2 * offset;
+
+        // Now we need to rotate the div to the correct position
+        var up = new THREE.Vector3(0, 0, 1);
+
+        // we get the vector from both of the triangle, and use the average
+        var normal = new THREE.Vector3();
+        normal.addVectors(face.normal, faceNext.normal);
+        normal.divideScalar(2);
+
+        // We calculate the axis on which to rotate by
+        // selecting the cross of the vectors
+        var axis = new THREE.Vector3();
+        axis.crossVectors(up, normal);
+
+        // based on the axis, in relation to our normal vector
+        // we can calculate the angle.
+        var angle = Math.atan2(axis.length(), up.dot(normal));
+        axis.normalize();
+
+        // now we can use matrix function to rotate the object so
+        // it is aligned with the normal from the face
+        var rotationToApply = new THREE.Matrix4();
+        rotationToApply.makeRotationAxis(axis, angle);
+
+        result.push({pos: newPosition, rot: rotationToApply});
+    }
+
+    return result;
+}
+
+function createCSS3ObjectFromString() {
+    var parentDiv = document.createElement('div');
+    var parent = new THREE.CSS3DObject(parentDiv);
+    scene.add(parent);
+    parent.name = 'cube';
+
+    // with three.js face4 has been replaced with face3, so when
+    // we want to map a div to the side of a cube, we need to
+    // merge these, or compensate the offset
+    for (var iFace = 0; iFace < cube.faces.length; iFace += 2) {
+
+        // create a new object
+        var clone = createCSS3DObject(iFace + 1);
+
+        // get the normals from the cube
+        var offset = 40;
+
+        // get this face and the next which both make the cube
+        var face = cube.faces[iFace];
+        var faceNext = cube.faces[iFace + 1];
+
+        // First reposition the div elements based on the two faces
+        // that make up the side of the cube
+        clone.position.x = (face.centroid.x + faceNext.centroid.x) / 2 * offset;
+        clone.position.y = (face.centroid.y + faceNext.centroid.y) / 2 * offset;
+        clone.position.z = (face.centroid.z + faceNext.centroid.z) / 2 * offset;
+
+        // Now we need to rotate the div to the correct position
+        var up = new THREE.Vector3(0, 0, 1);
+
+        // we get the vector from both of the triangle, and use the average
+        var normal = new THREE.Vector3();
+        normal.addVectors(face.normal, faceNext.normal);
+        normal.divideScalar(2);
+
+        // We calculate the axis on which to rotate by
+        // selecting the cross of the vectors
+        var axis = new THREE.Vector3();
+        axis.crossVectors(up, normal);
+
+        // based on the axis, in relation to our normal vector
+        // we can calculate the angle.
+        var angle = Math.atan2(axis.length(), up.dot(normal));
+        axis.normalize();
+
+        // now we can use matrix function to rotate the object so
+        // it is aligned with the normal from the face
+        var matrix4 = new THREE.Matrix4();
+        matrix4.makeRotationAxis(axis, angle);
+
+        // and set the rotation on the css object
+        clone.rotation.setFromRotationMatrix(matrix4);
+
+        // add to the parent object
+        parent.add(clone);
+    }
+}
+
+function getCenter(object, face) {
+
+    console.log(face);
+    var a = object.vertices[face.a];
+    var b = object.vertices[face.b];
+    var c = object.vertices[face.c];
+
+    var added = new THREE.Vector3();
+    added.add(a);
+    added.add(b);
+    added.add(c);
+
+    console.log(added);
+
+
+    return added;
+}
+
+
+function addControlGui(controlObject) {
+    var gui = new dat.GUI();
+    gui.add(controlObject, "toCube");
+    gui.add(controlObject, "toSphere");
+    gui.add(controlObject, "toCylinder");
+    gui.add(controlObject, "toPlane");
+}
+
+function addStatsObject() {
+    stats = new Stats();
+    stats.setMode(0);
+
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+
+    document.body.appendChild(stats.domElement);
+}
+
+
+/**
+ * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
+ * for future renders
+ */
+function render() {
+
+    TWEEN.update();
+
+    // update stats
+    stats.update();
+
+    controls.update();
+
+    // and render the scene
+    renderer.render(scene, camera);
+
+    // render using requestAnimationFrame
+    requestAnimationFrame(render);
+}
+
+
+/**
+ * Function handles the resize event. This make sure the camera and the renderer
+ * are updated at the correct moment.
+ */
+function handleResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function handleSubmit(e) {
+    if (e.keyCode == 13) {
+        console.log(document.getElementById("queryField").value);
+    }
+}
+
+
+// calls the init function when the window is done loading.
+window.onload = init;
+// calls the handleResize function when the window is resized
+window.addEventListener('resize', handleResize, false);
+
+
+</script>
+<body>
+
+</body>
+
+</html>
