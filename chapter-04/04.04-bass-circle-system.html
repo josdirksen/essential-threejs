@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>04.03 - Output histogram with colors</title>
+    <title>04.04 - Bass Circle</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
@@ -129,7 +129,7 @@ function init() {
 function addControlGui(controlObject) {
     var gui = new dat.GUI();
     gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
-    gui.add(controlObject, 'opacity', 0.1, 1);
+//    gui.add(controlObject, 'opacity', 0.1, 1);
 //        gui.addColor(controlObject, 'color');
 }
 
@@ -208,7 +208,7 @@ function setupSound() {
         var lowOffsets = []; var midOffsets = []; var highOffsets = [];
         var lowRings = 10; var midRings = 10; var highRings = 10;
         var midFrom = 12; var highFrom = 24;
-        var lowVolumeDownScale = 15; var midVolumeDownScale = 15; var highVolumeDownScale = 15;
+        var lowVolumeDownScale = 35; var midVolumeDownScale = 35; var highVolumeDownScale = 35;
 
         // calculate the rings and offsets for the low sounds, rannge from
         // 0.5 to 0 pi

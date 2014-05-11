@@ -78,10 +78,7 @@ function init() {
 
 
 function addControlGui(controlObject) {
-    var gui = new dat.GUI();
-    gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
-    gui.add(controlObject, 'opacity', 0.1, 1);
-//        gui.addColor(controlObject, 'color');
+
 }
 
 function addStatsObject() {
@@ -168,6 +165,13 @@ function updateWaves() {
     pm.transparent = true;
     pm.opacity = 0.2;
     pm.size=1.5;
+
+
+//    var pm = new THREE.ParticleSystemMaterial();
+//    pm.color = new THREE.Color(0x00ff00);
+//    pm.transparent = true;
+//    pm.opacity = 0.5;
+//    pm.size=0.1;
 
 
     // create an empty geometry
