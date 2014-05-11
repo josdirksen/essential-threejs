@@ -63,7 +63,7 @@
             scene.add(earthMesh);
 
             // create a cloudGeometry, slighly bigger than the original sphere
-            var cloudGeometry = new THREE.SphereGeometry(sphereGeometry.radius*1.01, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
+            var cloudGeometry = new THREE.SphereGeometry(15.3, 60, 60);
             var cloudMaterial = createCloudMaterial();
             var cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
             cloudMesh.name = 'clouds';

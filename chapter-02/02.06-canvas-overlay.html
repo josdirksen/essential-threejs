@@ -64,14 +64,14 @@ function init() {
     scene.add(earthMesh);
 
     // create overlay
-    var overlayGeometry = new THREE.SphereGeometry(sphereGeometry.radius, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
+    var overlayGeometry = new THREE.SphereGeometry(15, 60, 60);
     var overlayMaterial = createOverlayMaterial();
     var overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
     overlayMesh.name= 'overlay';
     scene.add(overlayMesh);
 
     // create a cloudGeometry, slighly bigger than the original sphere
-    var cloudGeometry = new THREE.SphereGeometry(sphereGeometry.radius * 1.02, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
+    var cloudGeometry = new THREE.SphereGeometry(15.3, 60, 60);
     var cloudMaterial = createCloudMaterial();
     var cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
     cloudMesh.name = 'clouds';
@@ -157,16 +157,10 @@ function createEarthMaterial() {
 
     var earthMaterial = new THREE.MeshPhongMaterial();
     earthMaterial.map = earthTexture;
-//    earthMaterial.map = new THREE.Texture(addCanvas());
-//    earthMaterial.map.needsUpdate = true;
 
     // specular defines the reflection of the surface
     earthMaterial.specularMap = specularMap;
     earthMaterial.specular = new THREE.Color(0x262626);
-
-    // bumpmap
-//    earthMaterial.bumpMap = bumpMap;
-//    earthMaterial.bumpScale = 0.15;
 
     // normalmap
     earthMaterial.normalMap = normalMap;

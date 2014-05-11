@@ -15,7 +15,7 @@
         body {
             /* set margin to 0 and overflow to hidden, to go fullscreen */
             margin: 0;
-            /*overflow: hidden;*/
+            overflow: hidden;
         }
     </style>
 </head>
@@ -63,15 +63,10 @@ function init() {
     earthMesh.name = 'earth';
     scene.add(earthMesh);
 
-    // create overlay
-    var overlayGeometry = new THREE.SphereGeometry(sphereGeometry.radius, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
-    var overlayMaterial = createOverlayMaterial();
-    var overlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial);
-    overlayMesh.name= 'overlay';
-//    scene.add(overlayMesh);
+    console.log(sphereGeometry);
 
     // create a cloudGeometry, slighly bigger than the original sphere
-    var cloudGeometry = new THREE.SphereGeometry(sphereGeometry.radius * 1.02, sphereGeometry.widthSegments, sphereGeometry.heightSegments);
+    var cloudGeometry = new THREE.SphereGeometry(15.2, 60, 60);
     var cloudMaterial = createCloudMaterial();
     var cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
     cloudMesh.name = 'clouds';
