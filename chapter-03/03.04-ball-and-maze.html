@@ -68,7 +68,7 @@
         // generate a maze
         var maze = new Maze(scene,15, width, width);
         maze.generate();
-//        maze.draw();
+        maze.draw();
         var walls = maze.getElements();
         walls.forEach(function(e) {collidableMeshList.push(e)});
 

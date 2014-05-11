@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>01.06 - Statistics</title>
+    <title>03.03 - Collision Detection</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
@@ -112,9 +112,6 @@
 
         // setup the control object for the control gui
         control = new function () {
-            this.rotationSpeed = 0.005;
-            this.opacity = 0.6;
-            this.color = cube.material.color.getHex();
 
             this.forward = function () {
                 takeStepForward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 400);
@@ -149,7 +146,7 @@
 
     function takeStepRight(cube, start, end, time) {
         var cubeGeometry = cube.geometry;
-        var widht = cube.geometry.width;
+        var widht = 2;
         if (!isTweening) {
             var tween = new TWEEN.Tween({ x: start, cube: cube, previous: 0})
                     .to({ x: end }, time )
@@ -181,7 +178,7 @@
 
     function takeStepLeft(cube, start, end, time) {
         var cubeGeometry = cube.geometry;
-        var widht = cube.geometry.width;
+        var widht = 2;
         if (!isTweening) {
             var tween = new TWEEN.Tween({ x: start, cube: cube, previous: 0})
                     .to({ x: end }, time )
@@ -212,9 +209,10 @@
     }
 
     function takeStepBackward(cube, start, end, time) {
-        var widht = cube.geometry.width;
+        var widht = 2;
         var cubeGeometry = cube.geometry;
 
+        console.log(widht);
         if (!isTweening) {
             var tween = new TWEEN.Tween( { x: start, cube: cube, previous: 0} )
                     .to( { x: end }, time )
@@ -246,7 +244,7 @@
     }
 
     function takeStepForward(cube, start, end, time) {
-        var widht = cube.geometry.width;
+        var widht = 2;
         var cubeGeometry = cube.geometry;
 
         if (!isTweening) {
@@ -286,9 +284,6 @@
 
     function addControlGui(controlObject) {
         var gui = new dat.GUI();
-        gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
-        gui.add(controlObject, 'opacity', 0.1, 1);
-        gui.addColor(controlObject, 'color');
         gui.add(controlObject,'forward');
         gui.add(controlObject,'back');
         gui.add(controlObject,'left');
@@ -346,8 +341,6 @@
         var cube = scene.getObjectByName('cube');
         var originPoint = cube.position.clone();
 
-
-
         for (var vertexIndex = 0; vertexIndex < cube.geometry.vertices.length; vertexIndex++)
         {
             var localVertex = cube.geometry.vertices[vertexIndex].clone();
@@ -372,8 +365,6 @@
                     cube = createCube();
                 }
             }
-
-
         }
 
         // and render the scene

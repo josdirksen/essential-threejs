@@ -92,16 +92,16 @@
             this.color = cube.material.color.getHex();
 
             this.forward = function () {
-                takeStepForward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 200);
+                takeStepForward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 2000);
             };
             this.back = function () {
-                takeStepBackward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 200);
+                takeStepBackward(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 2000);
             };
             this.left = function () {
-                takeStepLeft(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 200);
+                takeStepLeft(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 2000);
             };
             this.right = function () {
-                takeStepRight(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 200);
+                takeStepRight(scene.getObjectByName('cube'), 0, 0.5 * Math.PI, 2000);
             };
         };
 
