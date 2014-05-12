@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>05.07 - Advanced tree</title>
+    <title>05.05 - Generated Tree</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
@@ -154,6 +154,8 @@ function createTree(config) {
         "twistRate": config.twistRate,
         "trunkLength": config.trunkLength
     });
+
+    console.log(myTree);
 
     var trunkGeom = new THREE.Geometry();
     var leaveGeom = new THREE.Geometry();

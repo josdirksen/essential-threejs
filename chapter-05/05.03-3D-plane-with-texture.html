@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>05.02 - 3D plane from scratch</title>
+    <title>05.02 - 3D plane with texture</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
@@ -175,10 +175,8 @@ function create3DTerrain(width, depth, spacingX, spacingZ, height) {
 
     // setup the material
     var mat = new THREE.MeshPhongMaterial();
-//    mat.vertexColors = THREE.FaceColors;
-//    mat.shading = THREE.NoShading;
-//    mat.map = THREE.ImageUtils.loadTexture("../assets/textures/debug.jpg");
     mat.map = THREE.ImageUtils.loadTexture("../assets/textures/wood_1-1024x1024.png");
+//    mat.map = THREE.ImageUtils.loadTexture("../assets/textures/debug.jpg");
 
     // create the mesh
     var groundMesh = new THREE.Mesh(geometry,mat);

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>05.05- 3D plane from scratch</title>
+    <title>05.04 - Simple 3D buildings</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
@@ -31,6 +31,7 @@ var camera;
 var control;
 var stats;
 
+//var scale = chroma.scale(['black','#111111','#222222','white','red']).domain([0,1],10);
 var scale = chroma.scale(['black','#111111','#222222','white','yellow']).domain([0,1],10);
 
 
@@ -83,7 +84,7 @@ function init() {
     document.body.appendChild(renderer.domElement);
 
     // set up the example specific stuff
-    createCity(40, 20, 20, 1);
+    createCity(40, 20, 10, 3);
 
     // call the render function, after the first render, interval is determined
     // by requestAnimationFrame
