@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>06.01 - CSS3DSkeletons</title>
+    <title>06.03 - Animations</title>
     <script src="../libs/three.js"></script>
     <script src="../libs/dat.gui.min.js"></script>
     <script src="../libs/stats.min.js"></script>
@@ -242,9 +242,16 @@ function getPositionAndRotation(geometry, offset) {
         var faceNext = geometry.faces[iFace + 1];
 
         // calculate the position of where the elements need to go to.
-        newPosition.x = (face.centroid.x + faceNext.centroid.x) / 2 * offset;
-        newPosition.y = (face.centroid.y + faceNext.centroid.y) / 2 * offset;
-        newPosition.z = (face.centroid.z + faceNext.centroid.z) / 2 * offset;
+        var centroid = new THREE.Vector3();
+        centroid.copy( geometry.vertices[face.a] )
+                .add( geometry.vertices[face.b] )
+                .add( geometry.vertices[face.c] )
+                .add( geometry.vertices[faceNext.a] )
+                .add( geometry.vertices[faceNext.b] )
+                .add( geometry.vertices[faceNext.c] )
+                .divideScalar( 6 ).multiplyScalar(offset);
+
+        newPosition = centroid.clone();
 
         // Now we need to rotate the div to the correct position
         var up = new THREE.Vector3(0, 0, 1);
@@ -273,64 +280,6 @@ function getPositionAndRotation(geometry, offset) {
     }
 
     return result;
-}
-
-function createCSS3ObjectFromString() {
-    var parentDiv = document.createElement('div');
-    var parent = new THREE.CSS3DObject(parentDiv);
-    scene.add(parent);
-    parent.name = 'cube';
-
-    // with three.js face4 has been replaced with face3, so when
-    // we want to map a div to the side of a cube, we need to
-    // merge these, or compensate the offset
-    for (var iFace = 0; iFace < cube.faces.length; iFace += 2) {
-
-        // create a new object
-        var clone = createCSS3DObject(iFace + 1);
-
-        // get the normals from the cube
-        var offset = 40;
-
-        // get this face and the next which both make the cube
-        var face = cube.faces[iFace];
-        var faceNext = cube.faces[iFace + 1];
-
-        // First reposition the div elements based on the two faces
-        // that make up the side of the cube
-        clone.position.x = (face.centroid.x + faceNext.centroid.x) / 2 * offset;
-        clone.position.y = (face.centroid.y + faceNext.centroid.y) / 2 * offset;
-        clone.position.z = (face.centroid.z + faceNext.centroid.z) / 2 * offset;
-
-        // Now we need to rotate the div to the correct position
-        var up = new THREE.Vector3(0, 0, 1);
-
-        // we get the vector from both of the triangle, and use the average
-        var normal = new THREE.Vector3();
-        normal.addVectors(face.normal, faceNext.normal);
-        normal.divideScalar(2);
-
-        // We calculate the axis on which to rotate by
-        // selecting the cross of the vectors
-        var axis = new THREE.Vector3();
-        axis.crossVectors(up, normal);
-
-        // based on the axis, in relation to our normal vector
-        // we can calculate the angle.
-        var angle = Math.atan2(axis.length(), up.dot(normal));
-        axis.normalize();
-
-        // now we can use matrix function to rotate the object so
-        // it is aligned with the normal from the face
-        var matrix4 = new THREE.Matrix4();
-        matrix4.makeRotationAxis(axis, angle);
-
-        // and set the rotation on the css object
-        clone.rotation.setFromRotationMatrix(matrix4);
-
-        // add to the parent object
-        parent.add(clone);
-    }
 }
 
 function getCenter(object, face) {

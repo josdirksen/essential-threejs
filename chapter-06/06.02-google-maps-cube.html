@@ -47,7 +47,9 @@
     var stats;
 
     // the geometry we'll use
-    var cube = new THREE.SphereGeometry(700,6,4);
+//    var cube = new THREE.SphereGeometry(700,6,4);
+    var cube = new THREE.CubeGeometry(450,450,450);
+
 
     var sides = [];
     var divCount = 0;
@@ -133,19 +135,25 @@
             // create a new object
             var side = createCSS3DObject(s);
 
-
-
-
-
             // get this face and the next which both make the cube
             var face = geometry.faces[iFace];
             var faceNext = geometry.faces[iFace+1];
 
             // First reposition the div elements based on the two faces
             // that make up the side of the cube
-            side.position.x = (face.centroid.x + faceNext.centroid.x)/2;
-            side.position.y = (face.centroid.y + faceNext.centroid.y)/2;
-            side.position.z = (face.centroid.z + faceNext.centroid.z)/2;
+            console.log(face);
+            var centroid = new THREE.Vector3();
+            centroid.copy( geometry.vertices[face.a] )
+                    .add( geometry.vertices[face.b] )
+                    .add( geometry.vertices[face.c] )
+                    .add( geometry.vertices[faceNext.a] )
+                    .add( geometry.vertices[faceNext.b] )
+                    .add( geometry.vertices[faceNext.c] )
+                    .divideScalar( 6 );
+
+            side.position.x = centroid.x;
+            side.position.y = centroid.y;
+            side.position.z = centroid.z;
 
             // Now we need to rotate the div to the correct position
             var up = new THREE.Vector3(0,0,1);
