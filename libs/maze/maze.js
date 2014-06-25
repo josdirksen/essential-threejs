@@ -132,7 +132,7 @@ var Maze = function (scene, cells, width, height) {
             if (lengthY === 0) lengthY = 0.5;
 
             // create a cube to represent the wall segment
-            var wallGeom = new THREE.CubeGeometry(lengthX, 3, lengthY);
+            var wallGeom = new THREE.BoxGeometry(lengthX, 3, lengthY);
             var wallMaterial = new THREE.MeshPhongMaterial({color: 0xff0000, opacity: 0.8, transparent: true});
 
 

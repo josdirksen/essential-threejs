@@ -29,7 +29,7 @@
 
     function createCube() {
 
-        var cubeGeometry = new THREE.CubeGeometry(2, 2, 2);
+        var cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
         var cubeMaterial = new THREE.MeshLambertMaterial({color: 0xff0000, transparent: true, opacity: 0.6});
         var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
         cube.castShadow = true;
@@ -72,7 +72,7 @@
         scene.add(plane);
 
 
-        var cube2 = new THREE.CubeGeometry(4, 6, 4);
+        var cube2 = new THREE.BoxGeometry(4, 6, 4);
         var cubeMaterial = new THREE.MeshLambertMaterial({color: 0x00ff00, transparent: true, opacity: 0.6});
         var cube2Mesh = new THREE.Mesh(cube2, cubeMaterial);
         cube2Mesh.position.x = 20;
@@ -332,7 +332,7 @@
         //   determines if any of the rays from the cube's origin to each vertex
         //		intersects any face of a mesh in the array of target meshes
         //   for increased collision accuracy, add more vertices to the cube;
-        //		for example, new THREE.CubeGeometry( 64, 64, 64, 8, 8, 8, wireMaterial )
+        //		for example, new THREE.BoxGeometry( 64, 64, 64, 8, 8, 8, wireMaterial )
         //   HOWEVER: when the origin of the ray is within the target mesh, collisions do not occur
         var cube = scene.getObjectByName('cube');
         var originPoint = cube.position.clone();

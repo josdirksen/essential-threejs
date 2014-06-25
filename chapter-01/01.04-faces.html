@@ -52,7 +52,7 @@
         scene.add(plane);
 
         // create a cube
-        var cubeGeometry = new THREE.CubeGeometry(6, 4, 6);
+        var cubeGeometry = new THREE.BoxGeometry(6, 4, 6);
         var materialArray = applyFaceColors(cubeGeometry);
         var cubeMaterial = new THREE.MeshFaceMaterial(materialArray);
 

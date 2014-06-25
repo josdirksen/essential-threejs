@@ -192,9 +192,9 @@ function create3DOverlay(data) {
 
             var position = latLongToVector3(lat, lon, 15, 0);
 
-//            var cube = new THREE.Mesh(new THREE.CubeGeometry(0.5,0.5,1+value/16,1,1,1,cubeMat));
-            var cube = new THREE.Mesh(new THREE.CubeGeometry(0.2,0.2,value/64,1,1,1,cubeMat));
-//            var cube = new THREE.Mesh(new THREE.CubeGeometry(0.15,0.15,1+Math.log(value),1,1,1,cubeMat));
+//            var cube = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,1+value/16,1,1,1,cubeMat));
+            var cube = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,value/64,1,1,1,cubeMat));
+//            var cube = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.15,1+Math.log(value),1,1,1,cubeMat));
 //            Math.log()
 
 

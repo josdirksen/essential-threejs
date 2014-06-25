@@ -84,7 +84,7 @@ function init() {
     // setup the control object for the control gui
     control = new function () {
         this.toCube = function (e) {
-            updateStructure(new THREE.CubeGeometry(20, 14, 20, 5, 3, 5), 40);
+            updateStructure(new THREE.BoxGeometry(20, 14, 20, 5, 3, 5), 40);
         };
         this.toCylinder = function () {
             updateStructure(new THREE.CylinderGeometry(12, 12, 27, 15, 7, true), 40);
