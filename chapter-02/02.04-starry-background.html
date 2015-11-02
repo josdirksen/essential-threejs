@@ -11,6 +11,8 @@
             <script src="../libs/CopyShader.js"></script>
             <script src="../libs/ShaderPass.js"></script>
             <script src="../libs/MaskPass.js"></script>
+            <script src="../assets/data/nodes-data.js"></script>
+            
             <style>
             body {
                 /* set margin to 0 and overflow to hidden, to go fullscreen */
@@ -34,6 +36,7 @@
         var sceneBG;
         var composer;
         var clock;
+        var earthRadius;
 
         /**
         * Initializes the scene, camera and objects. Called when the window is
@@ -56,7 +59,8 @@
             renderer.shadowMapEnabled = true;
 
             // create a sphere
-            var sphereGeometry = new THREE.SphereGeometry(15, 60, 60);
+            earthRadius = 15;
+            var sphereGeometry = new THREE.SphereGeometry(earthRadius, 60, 60);
             var sphereMaterial = createEarthMaterial();
             var earthMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
             earthMesh.name = 'earth';
@@ -67,7 +71,10 @@
             var cloudMaterial = createCloudMaterial();
             var cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
             cloudMesh.name = 'clouds';
-            scene.add(cloudMesh);
+            //scene.add(cloudMesh);
+
+            //add nodes
+            displayNodes();
 
             // now add some better lighting
             var ambientLight = new THREE.AmbientLight(0x111111);
@@ -137,6 +144,34 @@
         }
 
 
+        function displayNodes(){
+		var nodes = nodesData["nodes"];
+		var whiteMat = new THREE.LineBasicMaterial({
+			color: 0xffffff
+		});
+		
+		var r = earthRadius*1.05;
+		for(var node in nodes){
+			//console.log(node +"-->" +nodes[node]);
+			var lat = nodes[node][8]*Math.PI/180.0;
+			var lon = -nodes[node][9]*Math.PI/180.0;
+			
+			var lineGeom = new THREE.Geometry();
+			lineGeom.vertices.push(
+				new THREE.Vector3( 0, 0, 0 ),
+				new THREE.Vector3( 0, 0, 30 )	
+			);
+			var pinLine = new THREE.Line( lineGeom, whiteMat );
+			
+			pinLine.geometry.vertices[1].x  = r * Math.cos(lat)*Math.cos(lon);
+			pinLine.geometry.vertices[1].y  = r * Math.sin(lat);
+			pinLine.geometry.vertices[1].z  = r * Math.cos(lat)*Math.sin(lon);
+			scene.add( pinLine );
+			
+		}		
+	}
+
+
         function createEarthMaterial() {
             // 4096 is the maximum width for maps
             var earthTexture = THREE.ImageUtils.loadTexture("../assets/textures/planets/earthmap4k.jpg");
@@ -188,8 +223,8 @@
             // update the camera
             cameraControl.update();
 
-            scene.getObjectByName('earth').rotation.y+=control.rotationSpeed;
-            scene.getObjectByName('clouds').rotation.y+=control.rotationSpeed*1.1;
+            //scene.getObjectByName('earth').rotation.y+=control.rotationSpeed;
+            //scene.getObjectByName('clouds').rotation.y+=control.rotationSpeed*1.1;
 
             // update light colors
             scene.getObjectByName('ambient').color = new THREE.Color(control.ambientLightColor);
