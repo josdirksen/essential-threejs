@@ -2,12 +2,16 @@
 <html>
 <head>
     <title>01.06 - Statistics</title>
+    <!-- 加载three.js库 -->
     <script src="../libs/three.js"></script>
+    <!-- 加载GUI控制库 -->
     <script src="../libs/dat.gui.min.js"></script>
+    <!-- 加载three.js数据统计库 -->
     <script src="../libs/stats.min.js"></script>
     <style>
         body {
             /* set margin to 0 and overflow to hidden, to go fullscreen */
+            /* 设置边框距离为0，超出内容为隐藏，目标是全屏 */
             margin: 0;
             overflow: hidden;
         }
@@ -16,46 +20,55 @@
 <script>
 
     // global variables
-    var renderer;
-    var scene;
-    var camera;
-    var control;
-    var stats;
+    var renderer;   // 渲染器
+    var scene;      // 场景
+    var camera;     // 摄像头
+    var control;    // GUI 控制器
+    var stats;      // 状态统计
 
     /**
      * Initializes the scene, camera and objects. Called when the window is
      * loaded by using window.onload (see below)
+     * 
+     * 初始化场景、摄像头以及一些基础对象，这个初始化函数在窗体加载完成的时候会被调用。
      */
     function init() {
 
         // create a scene, that will hold all our elements such as objects, cameras and lights.
+        //  创建场景，里面保存所有的基础对象、摄像头、灯光。
         scene = new THREE.Scene();
 
         // create a camera, which defines where we're looking at.
+        // 创建摄像头，后面会设置将摄像头摆放在哪里。
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 
         // create a render, sets the background color and the size
+        // 创建渲染器，设置背景颜色和尺寸
         renderer = new THREE.WebGLRenderer();
         renderer.setClearColor(0x000000, 1.0);
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMapEnabled = true;
 
         // create the ground plane
+        // 创建代表地的平台
         var planeGeometry = new THREE.PlaneGeometry(20, 20);
         var planeMaterial = new THREE.MeshLambertMaterial({color: 0xcccccc});
         var plane = new THREE.Mesh(planeGeometry, planeMaterial);
         plane.receiveShadow = true;
 
         // rotate and position the plane
+        // 对代表地的平台进行旋转90度，同时将物体下移2个单位
         plane.rotation.x = -0.5 * Math.PI;
         plane.position.x = 0;
         plane.position.y = -2;
         plane.position.z = 0;
 
         // add the plane to the scene
+        // 将plane加入场景中
         scene.add(plane);
 
         // create a cube
+        // 创建一个立方体
         var cubeGeometry = new THREE.BoxGeometry(6, 4, 6);
         var cubeMaterial = new THREE.MeshLambertMaterial({color: 0xff0000, transparent:true, opacity:0.6});
         var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
@@ -63,15 +76,18 @@
         cube.castShadow = true;
 
         // add the cube to the scene
+        // 将立方体加入场景中
         scene.add(cube);
 
         // position and point the camera to the center of the scene
+        // 设置摄像头在场景中的位置。
         camera.position.x = 15;
         camera.position.y = 16;
         camera.position.z = 13;
         camera.lookAt(scene.position);
 
         // add spotlight for the shadows
+        // 往场景中添加聚光源
         var spotLight = new THREE.SpotLight(0xffffff);
         spotLight.position.set(10, 20, 20);
         spotLight.shadowCameraNear = 20;
@@ -81,6 +97,7 @@
         scene.add(spotLight);
 
         // setup the control object for the control gui
+        // 创建控制对象，用于图形界面控制
         control = new function() {
             this.rotationSpeed = 0.005;
             this.opacity = 0.6;
@@ -88,13 +105,16 @@
         };
 
         // add extras
+        // 添加额外的功能
         addControlGui(control);
         addStatsObject();
 
 
         // add the output of the renderer to the html element
+        // 将场景渲染对象加入html中
         document.body.appendChild(renderer.domElement);
 
+        // 打印调试信息
         console.log('Log statement from the init function');
         console.log(cube);
 
@@ -105,6 +125,7 @@
     }
 
 
+    // 创建GUI，绑定控制对象及数据
     function addControlGui(controlObject) {
         var gui = new dat.GUI();
         gui.add(controlObject, 'rotationSpeed', -0.01, 0.01);
@@ -112,6 +133,7 @@
         gui.addColor(controlObject, 'color');
     }
 
+    // 添加状态对象
     function addStatsObject() {
         stats = new Stats();
         stats.setMode(0);
@@ -127,6 +149,8 @@
     /**
      * Called when the scene needs to be rendered. Delegates to requestAnimationFrame
      * for future renders
+     * 
+     * 这个函数将被重复调用，所以可以用于做动画效果
      */
     function render() {
         // update the camera
@@ -136,18 +160,23 @@
         camera.lookAt(scene.position);
 
         // change opacity
+        // 改变透明度
         scene.getObjectByName('cube').material.opacity = control.opacity;
 
         // change color
+        // 改变颜色
         scene.getObjectByName('cube').material.color = new THREE.Color(control.color);
 
         // update stats
+        // 更新状态
         stats.update();
 
         // and render the scene
+        // 渲染场景
         renderer.render(scene, camera);
 
         // render using requestAnimationFrame
+        // 开始下一次调用，相当于睡眠之后继续调用render这个函数。
         requestAnimationFrame(render);
     }
 
@@ -163,8 +192,10 @@
     }
 
     // calls the init function when the window is done loading.
+    // 绑定init函数，窗体加载完毕，会自动调用init函数
     window.onload = init;
     // calls the handleResize function when the window is resized
+    // 当窗体大小被重新调整的时候，调用handleResize函数进行重新调整相关参数。
     window.addEventListener('resize', handleResize, false);
 
 </script>
