@@ -82,7 +82,7 @@ function init() {
 
     // add sunlight (light
     var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position = new THREE.Vector3(200, 10, -50);
+    directionalLight.position.set(200, 10, -50);
     directionalLight.name = 'directional';
     scene.add(directionalLight);
 

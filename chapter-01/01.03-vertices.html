@@ -97,7 +97,7 @@
         vertices.forEach(function (vertex) {
             var vertexSphere = new THREE.SphereGeometry(0.15);
             var vertexMesh = new THREE.Mesh(vertexSphere, vertexMaterial);
-            vertexMesh.position = vertex;
+            vertexMesh.position.copy(vertex);
             scene.add(vertexMesh);
         });
     }

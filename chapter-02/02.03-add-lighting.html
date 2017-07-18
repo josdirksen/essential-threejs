@@ -58,13 +58,13 @@
 
         // now add some better lighting
         var ambientLight = new THREE.AmbientLight(0x111111);
-        ambientLight.name='ambient';
+        ambientLight.name = 'ambient';
         scene.add(ambientLight);
 
         // add sunlight (light
         var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position = new THREE.Vector3(100,10,-50);
-        directionalLight.name='directional';
+        directionalLight.position.set(100, 10, -50);
+        directionalLight.name = 'directional';
         scene.add(directionalLight);
 
         // position and point the camera to the center of the scene
@@ -77,7 +77,7 @@
         cameraControl = new THREE.OrbitControls(camera);
 
         // setup the control object for the control gui
-        control = new function () {
+        control = new function() {
             this.rotationSpeed = 0.001;
             this.ambientLightColor = ambientLight.color.getHex();
             this.directionalLightColor = directionalLight.color.getHex();
@@ -147,8 +147,8 @@
         // update the camera
         cameraControl.update();
 
-        scene.getObjectByName('earth').rotation.y+=control.rotationSpeed;
-        scene.getObjectByName('clouds').rotation.y+=control.rotationSpeed*1.1;
+        scene.getObjectByName('earth').rotation.y += control.rotationSpeed;
+        scene.getObjectByName('clouds').rotation.y += control.rotationSpeed * 1.1;
 
         // update light colors
         scene.getObjectByName('ambient').color = new THREE.Color(control.ambientLightColor);
